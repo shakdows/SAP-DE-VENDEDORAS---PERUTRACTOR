@@ -29,7 +29,7 @@ Chart.defaults.plugins.tooltip.titleFont = {weight:'700',size:12};
 Chart.defaults.plugins.tooltip.bodyFont = {weight:'600',size:12};
 
 /* ===== STATE ===== */
-const ST = { cli:'', ven:'', lf:'', grp:'', doc:'', d1:'', d2:'', trend:'tv', gran:'d',
+const ST = { cli:'', ven:'', lf:'', grp:'', doc:'', d1:'', d2:'', trend:'tv', gran:'d', mixMode:'m',
              sort:{col:'f', dir:-1}, page:1, per:14 };
 let charts = {};
 let INS_ROWS = [];
@@ -766,21 +766,29 @@ function renderGain(rows){
 }
 
 function renderGainMix(rows){
-  // dónut: margen por vendedor (top 10 + resto)
+  // dónut: peso por vendedor — alterna entre margen (m) y venta (tv)
+  const mode = ST.mixMode || 'm';
   const venta=sum(rows,'tv'),margen=sum(rows,'m');
-  const arr=Object.entries(groupAgg(rows,'v')).map(([k,v])=>({k,...v})).sort((a,b)=>b.margen-a.margen);
+  const arr=Object.entries(groupAgg(rows,'v')).map(([k,v])=>({k,venta:v.venta,margen:v.margen})).sort((a,b)=>(mode==='tv'?b.venta-a.venta:b.margen-a.margen));
+  const total = mode==='tv' ? venta : margen;
+  const val = x => mode==='tv' ? x.venta : x.margen;
   const top=arr.slice(0,10);
-  const restoM=arr.slice(10).reduce((a,x)=>a+x.margen,0);
+  const restoVal=arr.slice(10).reduce((a,x)=>a+val(x),0);
   const labels=top.map(x=>x.k.split(' ').slice(0,2).join(' '));
-  const data=top.map(x=>+x.margen.toFixed(2));
-  if(restoM>0.01){ labels.push('Resto'); data.push(+restoM.toFixed(2)); }
-  const palette=['#10b981','#0ea5a4','#3b6ef5','#7c5cfc','#f59e0b','#fb923c','#f43f5e','#a78bfa','#22c55e','#06b6d4','#94a0b4'];
+  const data=top.map(x=>+val(x).toFixed(2));
+  if(restoVal>0.01){ labels.push('Resto'); data.push(+restoVal.toFixed(2)); }
+  const palette = mode==='tv'
+    ? ['#f59e0b','#fb923c','#3b6ef5','#7c5cfc','#10b981','#0ea5a4','#f43f5e','#a78bfa','#22c55e','#06b6d4','#94a0b4']
+    : ['#10b981','#0ea5a4','#3b6ef5','#7c5cfc','#f59e0b','#fb923c','#f43f5e','#a78bfa','#22c55e','#06b6d4','#94a0b4'];
+  const titleText = mode==='tv'
+    ? `Venta total: ${fUSD(venta)}  ·  ${arr.length} vendedores`
+    : `Margen total: ${fUSD(margen)}  ·  ${venta?(margen/venta*100).toFixed(1):0}% sobre venta`;
   mk('#cGainMix',{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:palette.slice(0,labels.length),borderColor:'#fff',borderWidth:3,hoverOffset:6}]},
     options:{maintainAspectRatio:false,cutout:'58%',
       plugins:{legend:{position:'right',labels:{font:{size:11,weight:'600'},boxWidth:11,boxHeight:11,padding:8,usePointStyle:true,
-        generateLabels:ch=>ch.data.labels.map((l,i)=>{const v=ch.data.datasets[0].data[i];return {text:`${l.length>18?l.slice(0,17)+'…':l} · ${(v/margen*100).toFixed(0)}%`,fillStyle:ch.data.datasets[0].backgroundColor[i],strokeStyle:'transparent',pointStyle:'circle'};})}},
-        tooltip:{callbacks:{label:c=>` ${fUSD2(c.parsed)} · ${(c.parsed/margen*100).toFixed(1)}%`}},
-        title:{display:true,text:`Margen total: ${fUSD(margen)}  ·  ${venta?(margen/venta*100).toFixed(1):0}% sobre venta`,color:C.mut,font:{size:12,weight:'600'},padding:{bottom:8}}}}});
+        generateLabels:ch=>ch.data.labels.map((l,i)=>{const v=ch.data.datasets[0].data[i];return {text:`${l.length>18?l.slice(0,17)+'…':l} · ${(v/total*100).toFixed(0)}%`,fillStyle:ch.data.datasets[0].backgroundColor[i],strokeStyle:'transparent',pointStyle:'circle'};})}},
+        tooltip:{callbacks:{label:c=>` ${fUSD2(c.parsed)} · ${(c.parsed/total*100).toFixed(1)}%`}},
+        title:{display:true,text:titleText,color:C.mut,font:{size:12,weight:'600'},padding:{bottom:8}}}}});
 }
 
 let SKU_GAIN_DATA = [];
@@ -1009,6 +1017,12 @@ document.querySelectorAll('#skuToggles .series-tog').forEach(t=>t.onclick=()=>{
 document.querySelectorAll('#skuListSeg button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#skuListSeg button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); SKU_LIST_SORT = b.dataset.s; renderSkuList();
+});
+
+// Modo del dónut: Por ganancia (margen) / Por venta
+document.querySelectorAll('#mixModeSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#mixModeSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); ST.mixMode = b.dataset.m; renderGainMix(applyFilters());
 });
 
 // Reportes rápidos (botones grandes que abren modales)
