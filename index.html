@@ -564,11 +564,17 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
       <div class="series-toggles" id="gainToggles"><span class="toggle-label">Filtrar:</span><button class="series-tog on" data-s="0" data-color="amber"><span class="dot"></span>Venta</button><button class="series-tog on" data-s="1" data-color="rose"><span class="dot"></span>Costo</button><button class="series-tog on" data-s="2" data-color="green"><span class="dot"></span>Ganancia</button><button class="series-tog on" data-s="3" data-color="violet"><span class="dot"></span>Margen %</button></div><div class="chart-box tall"><canvas id="cGain"></canvas></div>
     </div>
     <div class="card">
-      <h3>Composición de la ganancia
-        <span style="display:flex;gap:8px;align-items:center"><span class="tag">Top 10 + Resto</span><button class="info-btn" title="¿Cómo leer este gráfico?">i</button></span>
+      <h3>Composición por vendedor
+        <span style="display:flex;gap:8px;align-items:center">
+          <span class="seg" id="mixModeSeg">
+            <button data-m="m" class="on">Por ganancia</button>
+            <button data-m="tv">Por venta</button>
+          </span>
+          <button class="info-btn" title="¿Cómo leer este gráfico?">i</button>
+        </span>
       </h3>
-      <div class="desc">Qué peso tiene cada vendedor en el margen total generado</div>
-      <div class="info-box">Anillo dividido por el <b>margen US$</b> que aportó cada vendedor. Los 10 principales se muestran individualmente; los demás se agrupan en "Resto". Pasa el cursor para ver el % y el monto exacto.</div>
+      <div class="desc">Peso de cada vendedor — alterna entre <b>ganancia (margen)</b> y <b>venta</b></div>
+      <div class="info-box">Anillo dividido por el peso de cada vendedor. Con <b>Por ganancia</b> ves quién aporta más al margen (rentabilidad real); con <b>Por venta</b> ves quién factura más en volumen. Un vendedor puede ser top en venta pero menos en ganancia si su margen % es bajo, y viceversa. Pasa el cursor para ver el monto y % exactos.</div>
       <div class="chart-box tall"><canvas id="cGainMix"></canvas></div>
     </div>
   </div>
