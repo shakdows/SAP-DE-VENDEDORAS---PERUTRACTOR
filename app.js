@@ -738,6 +738,82 @@ function closeModal(){
 }
 
 
+/* ===== ANÁLISIS DE GANANCIA ===== */
+function renderGain(rows){
+  // venta vs costo vs margen por día + margen % diario
+  const m={};
+  rows.forEach(r=>{const g=m[r.f]||(m[r.f]={tv:0,tc:0,m:0});g.tv+=r.tv;g.tc+=r.tc;g.m+=r.m;});
+  const days=Object.keys(m).sort();
+  const lbls=days.map(d=>d.slice(8)+'/'+d.slice(5,7));
+  const costo=days.map(d=>+m[d].tc.toFixed(2));
+  const marg =days.map(d=>+m[d].m.toFixed(2));
+  const pct  =days.map(d=>m[d].tv?+(m[d].m/m[d].tv*100).toFixed(1):0);
+  mk('#cGain',{data:{labels:lbls,datasets:[
+    {type:'bar',label:'Costo',data:costo,backgroundColor:'rgba(244,63,94,.75)',borderRadius:5,stack:'s',order:3,maxBarThickness:30},
+    {type:'bar',label:'Ganancia (margen)',data:marg,backgroundColor:C.green,borderRadius:5,stack:'s',order:2,maxBarThickness:30},
+    {type:'line',label:'Margen %',data:pct,borderColor:C.violet,borderWidth:2.5,tension:.3,pointRadius:2.5,pointBackgroundColor:C.violet,pointBorderColor:'#fff',pointBorderWidth:1.5,order:1,yAxisID:'y1'}]},
+    options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',align:'end',labels:{usePointStyle:true,boxWidth:9,padding:11}},
+        tooltip:{callbacks:{label:c=>c.dataset.label==='Margen %'?` Margen %: ${c.parsed.y}%`:` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`,
+          afterBody:items=>{const i=items[0].dataIndex;return 'Venta total: '+fUSD2(m[days[i]].tv);}}}},
+      scales:{x:{...noGrid,stacked:true,ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}},
+        y:{...gridOpt,stacked:true,beginAtZero:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'},title:{display:true,text:'US$',color:C.mut,font:{size:10}}},
+        y1:{position:'right',grid:{display:false},border:{display:false},min:0,suggestedMax:60,ticks:{callback:v=>v+'%',color:C.violet,font:{weight:'600'}},title:{display:true,text:'Margen %',color:C.violet,font:{size:10}}}}}});
+}
+
+function renderGainMix(rows){
+  // dónut: margen por vendedor (top 10 + resto)
+  const venta=sum(rows,'tv'),margen=sum(rows,'m');
+  const arr=Object.entries(groupAgg(rows,'v')).map(([k,v])=>({k,...v})).sort((a,b)=>b.margen-a.margen);
+  const top=arr.slice(0,10);
+  const restoM=arr.slice(10).reduce((a,x)=>a+x.margen,0);
+  const labels=top.map(x=>x.k.split(' ').slice(0,2).join(' '));
+  const data=top.map(x=>+x.margen.toFixed(2));
+  if(restoM>0.01){ labels.push('Resto'); data.push(+restoM.toFixed(2)); }
+  const palette=['#10b981','#0ea5a4','#3b6ef5','#7c5cfc','#f59e0b','#fb923c','#f43f5e','#a78bfa','#22c55e','#06b6d4','#94a0b4'];
+  mk('#cGainMix',{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:palette.slice(0,labels.length),borderColor:'#fff',borderWidth:3,hoverOffset:6}]},
+    options:{maintainAspectRatio:false,cutout:'58%',
+      plugins:{legend:{position:'right',labels:{font:{size:11,weight:'600'},boxWidth:11,boxHeight:11,padding:8,usePointStyle:true,
+        generateLabels:ch=>ch.data.labels.map((l,i)=>{const v=ch.data.datasets[0].data[i];return {text:`${l.length>18?l.slice(0,17)+'…':l} · ${(v/margen*100).toFixed(0)}%`,fillStyle:ch.data.datasets[0].backgroundColor[i],strokeStyle:'transparent',pointStyle:'circle'};})}},
+        tooltip:{callbacks:{label:c=>` ${fUSD2(c.parsed)} · ${(c.parsed/margen*100).toFixed(1)}%`}},
+        title:{display:true,text:`Margen total: ${fUSD(margen)}  ·  ${venta?(margen/venta*100).toFixed(1):0}% sobre venta`,color:C.mut,font:{size:12,weight:'600'},padding:{bottom:8}}}}});
+}
+
+function renderSkuGain(rows){
+  // top 20 SKUs por margen: barras venta + margen + linea margen %
+  const m={};
+  rows.forEach(r=>{const g=m[r.sku]||(m[r.sku]={d:r.d,tv:0,m:0});g.tv+=r.tv;g.m+=r.m;});
+  const arr=Object.entries(m).map(([k,v])=>({k,...v,mp:v.tv?v.m/v.tv*100:0})).sort((a,b)=>b.m-a.m).slice(0,20);
+  const lbls=arr.map(x=>x.k.length>10?x.k.slice(0,9)+'…':x.k);
+  mk('#cSkuGain',{data:{labels:lbls,datasets:[
+    {type:'bar',label:'Venta',data:arr.map(x=>+x.tv.toFixed(2)),backgroundColor:C.amber+'cc',borderRadius:4,order:3,maxBarThickness:22},
+    {type:'bar',label:'Ganancia',data:arr.map(x=>+x.m.toFixed(2)),backgroundColor:C.green,borderRadius:4,order:2,maxBarThickness:22},
+    {type:'line',label:'Margen %',data:arr.map(x=>+x.mp.toFixed(1)),borderColor:C.violet,borderWidth:2.5,tension:.3,pointRadius:3,pointBackgroundColor:C.violet,pointBorderColor:'#fff',pointBorderWidth:1.5,order:1,yAxisID:'y1'}]},
+    options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',align:'end',labels:{usePointStyle:true,boxWidth:9,padding:11}},
+        tooltip:{callbacks:{title:items=>{const i=items[0].dataIndex;return arr[i].k+' · '+short(arr[i].d,24);},
+          label:c=>c.dataset.label==='Margen %'?` Margen %: ${c.parsed.y}%`:` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`}}},
+      scales:{x:{...noGrid,ticks:{font:{size:10}}},
+        y:{...gridOpt,beginAtZero:true,position:'left',ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}},
+        y1:{position:'right',grid:{display:false},border:{display:false},min:0,suggestedMax:100,ticks:{callback:v=>v+'%',color:C.violet,font:{weight:'600'}}}}}});
+}
+
+function renderVenGain(rows){
+  // vendedores ordenados POR MARGEN (no por venta): barras margen + linea margen %
+  const arr=Object.entries(groupAgg(rows,'v')).map(([k,v])=>({k,...v,mp:v.venta?v.margen/v.venta*100:0})).sort((a,b)=>b.margen-a.margen);
+  const lbls=arr.map(x=>x.k.split(' ')[0]+' '+(x.k.split(' ')[1]||'').slice(0,1)+'.');
+  mk('#cVenGain',{data:{labels:lbls,datasets:[
+    {type:'bar',label:'Ganancia US$',data:arr.map(x=>+x.margen.toFixed(2)),backgroundColor:ctx=>{const c=ctx.chart.ctx.createLinearGradient(0,0,0,340);c.addColorStop(0,C.green);c.addColorStop(1,'#0e9170');return c;},borderRadius:6,maxBarThickness:36,order:2},
+    {type:'line',label:'Margen %',data:arr.map(x=>+x.mp.toFixed(1)),borderColor:C.violet,borderWidth:2.5,tension:.3,pointRadius:3.5,pointBackgroundColor:C.violet,pointBorderColor:'#fff',pointBorderWidth:1.5,order:1,yAxisID:'y1'}]},
+    options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',align:'end',labels:{usePointStyle:true,boxWidth:9,padding:11}},
+        tooltip:{callbacks:{label:c=>c.dataset.label==='Margen %'?` Margen %: ${c.parsed.y}%`:` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`,
+          afterBody:items=>{const i=items[0].dataIndex;return 'Venta: '+fUSD2(arr[i].venta)+' · Transac.: '+fNum(arr[i].trans);}}}},
+      scales:{x:{...noGrid,ticks:{font:{size:10}}},
+        y:{...gridOpt,beginAtZero:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}},
+        y1:{position:'right',grid:{display:false},border:{display:false},min:0,suggestedMax:60,ticks:{callback:v=>v+'%',color:C.violet,font:{weight:'600'}}}}}});
+}
+
 /* ===== COMPARADOR DE PERIODOS ===== */
 function periodStats(rows,d1,d2){
   const sub=rows.filter(r=>(!d1||r.f>=d1)&&(!d2||r.f<=d2));
@@ -798,6 +874,10 @@ function render(){
   renderDow(rows);
   renderRank(rows);
   renderDetail(rows);
+  renderGain(rows);
+  renderGainMix(rows);
+  renderSkuGain(rows);
+  renderVenGain(rows);
   renderCompare();
 }
 
