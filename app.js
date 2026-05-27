@@ -24,7 +24,7 @@ Chart.defaults.plugins.tooltip.titleFont = {weight:'700',size:12};
 Chart.defaults.plugins.tooltip.bodyFont = {weight:'600',size:12};
 
 /* ===== STATE ===== */
-const ST = { cli:'', ven:'', lf:'', grp:'', doc:'', d1:'', d2:'', trend:'tv',
+const ST = { cli:'', ven:'', lf:'', grp:'', doc:'', d1:'', d2:'', trend:'tv', gran:'d',
              sort:{col:'f', dir:-1}, page:1, per:14 };
 let charts = {};
 
@@ -57,6 +57,18 @@ function applyFilters(){
     if(ST.doc && r.doc!==ST.doc) return false;
     if(ST.d1 && r.f<ST.d1) return false;
     if(ST.d2 && r.f>ST.d2) return false;
+    if(q && !r.cl.toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+// filtro que respeta todo MENOS el rango de fecha global (para el comparador)
+function filterNonDate(){
+  const q = ST.cli.toLowerCase();
+  return DATA.filter(r=>{
+    if(ST.ven && r.v!==ST.ven) return false;
+    if(ST.lf && r.lf!==ST.lf) return false;
+    if(ST.grp && String(r.g)!==ST.grp) return false;
+    if(ST.doc && r.doc!==ST.doc) return false;
     if(q && !r.cl.toLowerCase().includes(q)) return false;
     return true;
   });
@@ -109,22 +121,103 @@ function mk(id, cfg){ if(charts[id]) charts[id].destroy(); charts[id]=new Chart(
 const gridOpt = {grid:{color:C.line,drawTicks:false},border:{display:false}};
 const noGrid = {grid:{display:false},border:{display:false}};
 
-function renderTrend(rows){
+/* ===== TIME BUCKETING ===== */
+function mondayOf(dStr){
+  const d=new Date(dStr+'T00:00:00'); const wd=(d.getDay()+6)%7; // 0=Lun
+  d.setDate(d.getDate()-wd); return d.toISOString().slice(0,10);
+}
+const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function bucketTime(rows, gran){
   const m={};
-  rows.forEach(r=>{ const g=m[r.f]||(m[r.f]={tv:0,m:0,tr:0}); g.tv+=r.tv; g.m+=r.m; g.tr++; });
-  const days = Object.keys(m).sort();
-  const lbls = days.map(d=>d.slice(8)+'/'+d.slice(5,7));
-  const mode = ST.trend;
-  const vals = days.map(d=> mode==='tr'? m[d].tr : m[d][mode]);
+  rows.forEach(r=>{
+    let key,lbl;
+    if(gran==='w'){ key=mondayOf(r.f); const e=new Date(key+'T00:00:00'); e.setDate(e.getDate()+6);
+      lbl=key.slice(8)+'–'+String(e.getDate()).padStart(2,'0')+' '+MES[e.getMonth()]; }
+    else if(gran==='mo'){ key=r.f.slice(0,7); lbl=MES[+r.f.slice(5,7)-1]+' '+r.f.slice(0,4); }
+    else { key=r.f; lbl=r.f.slice(8)+'/'+r.f.slice(5,7); }
+    const g=m[key]||(m[key]={lbl,tv:0,m:0,tr:0}); g.tv+=r.tv; g.m+=r.m; g.tr++;
+  });
+  const keys=Object.keys(m).sort();
+  return {keys, labels:keys.map(k=>m[k].lbl), data:keys.map(k=>m[k])};
+}
+
+function renderTrend(rows){
+  const gran=ST.gran, mode=ST.trend;
+  const {labels,data}=bucketTime(rows,gran);
+  const vals=data.map(d=> mode==='tr'?d.tr:d[mode]);
   const col = mode==='m'?C.green: mode==='tr'?C.blue: C.amber;
-  mk('#cTrend',{type:'line',data:{labels:lbls,datasets:[{data:vals,
-    borderColor:col,borderWidth:2.5,tension:.35,fill:true,pointRadius:3,pointHoverRadius:6,
-    pointBackgroundColor:col,pointBorderColor:'#ffffff',pointBorderWidth:2,
-    backgroundColor:ctx=>{const c=ctx.chart.ctx.createLinearGradient(0,0,0,340);c.addColorStop(0,col+'33');c.addColorStop(1,col+'04');return c;}}]},
+  const asBar = gran!=='d';
+  const ds = asBar
+    ? {data:vals,backgroundColor:ctx=>{const c=ctx.chart.ctx.createLinearGradient(0,0,0,340);c.addColorStop(0,col);c.addColorStop(1,col+'aa');return c;},
+        borderRadius:7,maxBarThickness:64,hoverBackgroundColor:col}
+    : {data:vals,borderColor:col,borderWidth:2.5,tension:.35,fill:true,pointRadius:3,pointHoverRadius:6,
+        pointBackgroundColor:col,pointBorderColor:'#fff',pointBorderWidth:2,
+        backgroundColor:ctx=>{const c=ctx.chart.ctx.createLinearGradient(0,0,0,340);c.addColorStop(0,col+'33');c.addColorStop(1,col+'04');return c;}};
+  mk('#cTrend',{type:asBar?'bar':'line',data:{labels,datasets:[ds]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false},
-      tooltip:{callbacks:{label:c=>mode==='tr'?fNum(c.parsed.y)+' transacciones':fUSD2(c.parsed.y)}}},
+      tooltip:{callbacks:{title:items=>items[0].label,
+        label:c=>{const d=data[c.dataIndex];return [
+          ' Venta: '+fUSD2(d.tv),' Margen: '+fUSD2(d.m)+'  ('+fPct(d.tv?d.m/d.tv*100:0)+')',
+          ' Transacciones: '+fNum(d.tr)];}}}},
       scales:{x:{...noGrid,ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}},
-        y:{...gridOpt,ticks:{callback:v=>mode==='tr'?v:'$'+(v/1000).toFixed(0)+'k'}}}}});
+        y:{...gridOpt,beginAtZero:true,ticks:{callback:v=>mode==='tr'?v:'$'+(v/1000).toFixed(0)+'k'}}}}});
+}
+
+/* ===== VENTA ACUMULADA ===== */
+function renderCumul(rows){
+  const {labels,data}=bucketTime(rows,'d');
+  let av=0,am=0; const cv=[],cm=[];
+  data.forEach(d=>{av+=d.tv;am+=d.m;cv.push(+av.toFixed(2));cm.push(+am.toFixed(2));});
+  mk('#cCumul',{type:'line',data:{labels,datasets:[
+    {label:'Venta acum.',data:cv,borderColor:C.amber,borderWidth:2.5,tension:.3,fill:true,pointRadius:0,pointHoverRadius:5,
+      backgroundColor:ctx=>{const c=ctx.chart.ctx.createLinearGradient(0,0,0,300);c.addColorStop(0,C.amber+'2e');c.addColorStop(1,C.amber+'03');return c;}},
+    {label:'Margen acum.',data:cm,borderColor:C.green,borderWidth:2.5,tension:.3,fill:false,pointRadius:0,pointHoverRadius:5,borderDash:[5,4]}]},
+    options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',align:'end',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,padding:12}},
+        tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`}}},
+      scales:{x:{...noGrid,ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:10}},
+        y:{...gridOpt,beginAtZero:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}}}}});
+}
+
+/* ===== MAPA DE CALOR DIARIO ===== */
+function renderHeat(rows){
+  const by={};
+  rows.forEach(r=>{ by[r.f]=(by[r.f]||0)+r.tv; });
+  const allDates=Object.keys(by).sort();
+  if(!allDates.length){ $('#heatWrap').innerHTML='<div class="empty">Sin datos para los filtros seleccionados</div>'; return; }
+  const start=mondayOf(allDates[0]), lastMon=mondayOf(allDates[allDates.length-1]);
+  const weeks=[]; let cur=new Date(start+'T00:00:00'); const end=new Date(lastMon+'T00:00:00');
+  while(cur<=end){ weeks.push(cur.toISOString().slice(0,10)); cur.setDate(cur.getDate()+7); }
+  const max=Math.max(...Object.values(by));
+  const DOWS=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const tone=v=>{ const t=v/max, a=0.14+t*0.86; return {bg:`rgba(245,158,11,${a.toFixed(2)})`, c:t>0.5?'#fff':'var(--amber-d)'}; };
+  let html='<div class="heat-grid"><div></div>'+DOWS.map(d=>`<div class="heat-dow">${d}</div>`).join('');
+  weeks.forEach(wk=>{
+    const wd=new Date(wk+'T00:00:00');
+    html+=`<div class="heat-wk">${String(wd.getDate()).padStart(2,'0')}/${String(wd.getMonth()+1).padStart(2,'0')}</div>`;
+    for(let i=0;i<7;i++){
+      const dt=new Date(wk+'T00:00:00'); dt.setDate(dt.getDate()+i);
+      const ds=dt.toISOString().slice(0,10), v=by[ds]||0;
+      if(v>0){ const t=tone(v);
+        html+=`<div class="heat-cell has" style="background:${t.bg};color:${t.c}" data-d="${ds}" data-v="${v}"><span class="dn">${dt.getDate()}</span>${v>=1000?(v/1000).toFixed(1)+'k':Math.round(v)}</div>`;
+      } else {
+        const inR = ds>=allDates[0] && ds<=allDates[allDates.length-1];
+        html+=`<div class="heat-cell ${inR?'':'empty'}"><span class="dn">${inR?dt.getDate():''}</span></div>`;
+      }
+    }
+  });
+  html+='</div><div class="heat-scale">Menos <span class="sw" style="background:var(--surface2)"></span><span class="sw" style="background:rgba(245,158,11,.3)"></span><span class="sw" style="background:rgba(245,158,11,.6)"></span><span class="sw" style="background:rgba(245,158,11,1)"></span> Más</div>';
+  const w=$('#heatWrap'); w.innerHTML=html;
+  let tip=document.querySelector('.heat-tip');
+  if(!tip){ tip=document.createElement('div'); tip.className='heat-tip'; document.body.appendChild(tip); }
+  w.querySelectorAll('.heat-cell.has').forEach(c=>{
+    c.addEventListener('mousemove',e=>{
+      const d=new Date(c.dataset.d+'T00:00:00');
+      tip.innerHTML=`${DOW[d.getDay()]} ${c.dataset.d.slice(8)}/${c.dataset.d.slice(5,7)} · <b>${fUSD2(+c.dataset.v)}</b>`;
+      tip.style.opacity=1; tip.style.left=Math.min(e.clientX+12,window.innerWidth-160)+'px'; tip.style.top=(e.clientY-12)+'px';
+    });
+    c.addEventListener('mouseleave',()=>tip.style.opacity=0);
+  });
 }
 
 function renderGroup(rows){
@@ -143,12 +236,17 @@ function renderVen(rows){
   const arr=Object.entries(m).map(([k,v])=>({k,...v})).sort((a,b)=>b.venta-a.venta);
   const lbl=arr.map(x=> x.k.split(' ')[0]+' '+(x.k.split(' ')[1]||'').slice(0,1)+'.');
   mk('#cVen',{type:'bar',data:{labels:lbl,datasets:[
-    {label:'Venta',data:arr.map(x=>x.venta),backgroundColor:C.amber,borderRadius:5,maxBarThickness:30},
-    {label:'Margen',data:arr.map(x=>x.margen),backgroundColor:C.green,borderRadius:5,maxBarThickness:30}]},
-    options:{maintainAspectRatio:false,plugins:{legend:{position:'top',align:'end',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,padding:12}},
-      tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`,
-        afterBody:items=>{const i=items[0].dataIndex;return 'Margen '+fPct(arr[i].margen/arr[i].venta*100);}}}},
-      scales:{x:{...noGrid,ticks:{font:{size:10}}},y:{...gridOpt,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}}}}});
+    {label:'Venta',data:arr.map(x=>x.venta),backgroundColor:ctx=>{const c=ctx.chart.ctx.createLinearGradient(0,0,0,340);c.addColorStop(0,C.amber);c.addColorStop(1,C.amber+'b0');return c;},borderRadius:6,maxBarThickness:34,order:2,yAxisID:'y'},
+    {label:'Margen',data:arr.map(x=>x.margen),backgroundColor:C.green,borderRadius:6,maxBarThickness:34,order:3,yAxisID:'y'},
+    {label:'Margen %',data:arr.map(x=>x.venta?+(x.margen/x.venta*100).toFixed(1):0),type:'line',
+      borderColor:C.violet,borderWidth:2.5,tension:.35,pointRadius:3.5,pointBackgroundColor:C.violet,pointBorderColor:'#fff',pointBorderWidth:1.5,
+      order:1,yAxisID:'y1'}]},
+    options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',align:'end',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,padding:12}},
+      tooltip:{callbacks:{label:c=>c.dataset.label==='Margen %'?` Margen %: ${c.parsed.y}%`:` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`}}},
+      scales:{x:{...noGrid,ticks:{font:{size:10}}},
+        y:{...gridOpt,beginAtZero:true,position:'left',ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}},
+        y1:{position:'right',beginAtZero:true,grid:{display:false},border:{display:false},ticks:{callback:v=>v+'%',color:C.violet,font:{weight:'600'}}}}}});
 }
 
 function renderLf(rows){
@@ -272,12 +370,160 @@ function renderChips(){
   });
 }
 
-/* ===== MAIN RENDER ===== */
+/* ===== EXPORTAR CSV ===== */
+function exportCSV(){
+  const rows = applyFilters();
+  const cols = ['Fecha','Documento','N° Documento','Cliente','Grupo','Vendedor','Key','Línea/Familia','SKU','Descripción','Cantidad','Total Venta US$','Total Costo US$','Margen US$','Margen %'];
+  const esc = v => { v = v==null?'':String(v); return /[",;\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+  const lines = [cols.join(';')];
+  rows.forEach(r=>{
+    const pct = r.tv ? (r.m/r.tv*100).toFixed(1) : '0';
+    lines.push([r.f, r.doc==='NC'?'Nota de Crédito':'Factura/Boleta', r.nd, r.cl, GRP[r.g], r.v, r.k, r.lf, r.sku, r.d, r.q, r.tv, r.tc, r.m, pct].map(esc).join(';'));
+  });
+  const blob = new Blob(['\ufeff'+lines.join('\r\n')], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href=url; a.download=`ventas_CTP_${rows.length}reg_${stamp}.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+/* ===== ANALISTA AUTOMATICO ===== */
+const ICO = {
+  up:'<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
+  warn:'<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  alert:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+  star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
+  cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  pkg:'<path d="M16.5 9.4 7.5 4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>',
+  pct:'<line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>'
+};
+function renderInsights(rows){
+  const grid = $('#insGrid');
+  if(!rows.length){ grid.innerHTML='<div class="empty" style="grid-column:1/-1">Sin datos para los filtros seleccionados</div>'; return; }
+  const out=[];
+  const venta=sum(rows,'tv'), margen=sum(rows,'m');
+  const mPct = venta?margen/venta*100:0;
+
+  // 1) Concentración de vendedores (riesgo)
+  const vAgg=Object.entries(groupAgg(rows,'v')).map(([k,v])=>({k,...v})).sort((a,b)=>b.venta-a.venta);
+  if(vAgg.length>1){
+    const top=vAgg[0], share=top.venta/venta*100;
+    out.push({t:share>=33?'warn':'info',ic:share>=33?'warn':'users',
+      h:`<b>${top.k.split(' ').slice(0,2).join(' ')}</b> concentra el <span class="big">${share.toFixed(0)}%</span> de la venta`,
+      d: share>=33?'Dependencia alta de un solo vendedor: conviene diversificar la cartera.':'Reparto razonable entre el equipo.'});
+  }
+  // 2) Concentración de clientes (Pareto)
+  const cAgg=Object.entries(groupAgg(rows,'cl')).map(([k,v])=>({k,...v})).sort((a,b)=>b.venta-a.venta);
+  let acc=0, n80=0; for(const c of cAgg){ acc+=c.venta; n80++; if(acc>=venta*0.8) break; }
+  const pctCli = (n80/cAgg.length*100);
+  out.push({t:'info',ic:'pct',
+    h:`El <span class="big">80%</span> de la venta viene de <b>${n80} clientes</b>`,
+    d:`Solo el ${pctCli.toFixed(0)}% de los ${fNum(cAgg.length)} clientes activos. Principio de Pareto en acción — prioriza su fidelización.`});
+  // 3) Cliente top
+  out.push({t:'star',ic:'star',
+    h:`Cliente #1: <b>${cAgg[0].k.length>26?cAgg[0].k.slice(0,25)+'…':cAgg[0].k}</b>`,
+    d:`<span class="big">${fUSD(cAgg[0].venta)}</span> · ${(cAgg[0].venta/venta*100).toFixed(1)}% del total · margen ${fPct(cAgg[0].venta?cAgg[0].margen/cAgg[0].venta*100:0)}.`});
+  // 4) Clientes a pérdida / margen negativo
+  const loss=cAgg.filter(c=>c.margen<0);
+  if(loss.length){
+    const lossSum=loss.reduce((a,c)=>a+c.margen,0);
+    out.push({t:'alert',ic:'alert',
+      h:`<b>${loss.length} cliente${loss.length>1?'s':''}</b> con margen negativo`,
+      d:`Ventas que dejaron pérdida (<span class="big">${fUSD2(lossSum)}</span> en conjunto). Revisa precios o devoluciones de: ${loss.slice(0,2).map(c=>c.k.split(' ')[0]).join(', ')}${loss.length>2?'…':''}.`});
+  }
+  // 5) Familia: mejor margen vs peor margen (entre relevantes)
+  const lAgg=Object.entries(groupAgg(rows,'lf')).map(([k,v])=>({k,...v,mp:v.venta?v.margen/v.venta*100:0})).filter(x=>x.venta>venta*0.01).sort((a,b)=>b.venta-a.venta);
+  if(lAgg.length>2){
+    const best=[...lAgg].sort((a,b)=>b.mp-a.mp)[0];
+    const worst=[...lAgg].sort((a,b)=>a.mp-b.mp)[0];
+    out.push({t:'good',ic:'up',
+      h:`<b>${best.k}</b> es la familia más rentable: <span class="big">${best.mp.toFixed(0)}%</span>`,
+      d:`Frente a un promedio de ${mPct.toFixed(0)}%. Empujar su venta mejora el margen global.`});
+    if(worst.k!==best.k && worst.mp < mPct*0.7){
+      out.push({t:'warn',ic:'pkg',
+        h:`<b>${worst.k}</b> vende bien pero su margen es bajo: <span class="big">${worst.mp.toFixed(0)}%</span>`,
+        d:`Mucho volumen (${fUSD(worst.venta)}) con poca rentabilidad. Oportunidad para renegociar costo o precio.`});
+    }
+  }
+  // 6) Mejor / peor día
+  const dAgg={}; rows.forEach(r=>dAgg[r.f]=(dAgg[r.f]||0)+r.tv);
+  const dArr=Object.entries(dAgg).sort((a,b)=>b[1]-a[1]);
+  if(dArr.length>1){
+    const bd=dArr[0]; const dt=new Date(bd[0]+'T00:00:00');
+    out.push({t:'info',ic:'cal',
+      h:`Mejor día: <b>${DOW[dt.getDay()]} ${bd[0].slice(8)}/${bd[0].slice(5,7)}</b>`,
+      d:`<span class="big">${fUSD(bd[1])}</span> en ventas — ${(bd[1]/venta*100).toFixed(0)}% de todo el periodo en un solo día.`});
+  }
+  // 7) Notas de crédito
+  const nc=rows.filter(r=>r.doc==='NC');
+  if(nc.length){
+    out.push({t:'warn',ic:'alert',
+      h:`<b>${nc.length}</b> nota${nc.length>1?'s':''} de crédito en el periodo`,
+      d:`Impacto de <span class="big">${fUSD2(sum(nc,'tv'))}</span> (devoluciones/ajustes), ya descontado de los totales.`});
+  }
+
+  grid.innerHTML = out.map(o=>`
+    <div class="ins ${o.t}">
+      <div class="ic"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">${ICO[o.ic]}</svg></div>
+      <div class="itxt">${o.h}<br><span style="color:var(--ink3);font-size:12px">${o.d}</span></div>
+    </div>`).join('');
+}
+
+/* ===== COMPARADOR DE PERIODOS ===== */
+function periodStats(rows,d1,d2){
+  const sub=rows.filter(r=>(!d1||r.f>=d1)&&(!d2||r.f<=d2));
+  const venta=sum(sub,'tv'),margen=sum(sub,'m');
+  return {rows:sub,venta,margen,mPct:venta?margen/venta*100:0,
+    docs:new Set(sub.map(r=>r.nd)).size, trans:sub.length,
+    ticket: new Set(sub.map(r=>r.nd)).size ? venta/new Set(sub.map(r=>r.nd)).size : 0};
+}
+function deltaHTML(a,b,money){
+  if(!a && !b) return '<span class="delta flat">—</span>';
+  const d = a? (b-a)/Math.abs(a)*100 : (b?100:0);
+  const cls = d>0.5?'up':d<-0.5?'down':'flat';
+  const arr = d>0.5?'▲':d<-0.5?'▼':'■';
+  return `<span class="delta ${cls}">${arr} ${d>0?'+':''}${d.toFixed(1)}%</span>`;
+}
+function renderCompare(){
+  const base=filterNonDate();
+  const A=periodStats(base,ST.aD1,ST.aD2), B=periodStats(base,ST.bD1,ST.bD2);
+  const ks=[
+    {l:'Venta',a:fUSD(A.venta),b:fUSD(B.venta),da:A.venta,db:B.venta},
+    {l:'Margen',a:fUSD(A.margen),b:fUSD(B.margen),da:A.margen,db:B.margen},
+    {l:'Margen %',a:fPct(A.mPct),b:fPct(B.mPct),da:A.mPct,db:B.mPct},
+    {l:'Documentos',a:fNum(A.docs),b:fNum(B.docs),da:A.docs,db:B.docs},
+    {l:'Ticket prom.',a:fUSD2(A.ticket),b:fUSD2(B.ticket),da:A.ticket,db:B.ticket},
+  ];
+  $('#cmpKpis').innerHTML = ks.map(k=>`
+    <div class="cmpk">
+      <div class="l">${k.l}</div>
+      <div class="vals"><span class="va">${k.a}</span><span class="sep">vs</span><span class="vb">${k.b}</span></div>
+      ${deltaHTML(k.da,k.db)}
+    </div>`).join('');
+
+  // chart: A vs B por top 7 lineas (venta)
+  const top=Object.entries(groupAgg(base,'lf')).map(([k,v])=>({k,venta:v.venta})).sort((a,b)=>b.venta-a.venta).slice(0,7).map(x=>x.k);
+  const sumBy=(rows,lf)=>rows.filter(r=>r.lf===lf).reduce((a,r)=>a+r.tv,0);
+  mk('#cCmp',{type:'bar',data:{labels:top,datasets:[
+    {label:'Periodo A',data:top.map(l=>sumBy(A.rows,l)),backgroundColor:C.amber,borderRadius:5,maxBarThickness:26},
+    {label:'Periodo B',data:top.map(l=>sumBy(B.rows,l)),backgroundColor:C.blue,borderRadius:5,maxBarThickness:26}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{position:'top',align:'end',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,padding:12}},
+      title:{display:true,text:'Venta por familia: A vs B',color:C.mut,font:{size:12,weight:'600'},padding:{bottom:8}},
+      tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`}}},
+      scales:{x:{...noGrid,ticks:{font:{size:10}}},y:{...gridOpt,beginAtZero:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}}}}});
+}
+
+
 function render(){
   const rows = applyFilters();
   renderChips();
   renderKPIs(rows);
+  renderInsights(rows);
   renderTrend(rows);
+  renderCumul(rows);
+  renderHeat(rows);
   renderGroup(rows);
   renderVen(rows);
   renderLf(rows);
@@ -285,6 +531,7 @@ function render(){
   renderDow(rows);
   renderRank(rows);
   renderDetail(rows);
+  renderCompare();
 }
 
 /* ===== EVENTS ===== */
@@ -305,8 +552,35 @@ $('#trendSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
   $('#trendSeg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); ST.trend=b.dataset.m; renderTrend(applyFilters());
 });
+$('#granSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+  $('#granSeg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); ST.gran=b.dataset.g; renderTrend(applyFilters());
+});
 $('#pgPrev').onclick=()=>{if(ST.page>1){ST.page--;renderDetail(applyFilters());}};
 $('#pgNext').onclick=()=>{ST.page++;renderDetail(applyFilters());};
+
+// Exportar CSV
+$('#exportBtn').onclick=exportCSV;
+
+// Info toggles ("¿cómo leer?")
+document.querySelectorAll('.info-btn').forEach(b=>b.onclick=()=>{
+  const box=b.closest('.card').querySelector('.info-box');
+  if(box) box.classList.toggle('show');
+});
+
+// Comparador: init rangos por defecto (primera vs segunda mitad del periodo)
+(function initCompare(){
+  const fechas=[...new Set(DATA.map(r=>r.f))].sort();
+  const min=fechas[0], max=fechas[fechas.length-1];
+  const mid=fechas[Math.floor(fechas.length/2)];
+  const midNext=fechas[Math.floor(fechas.length/2)+1]||mid;
+  ST.aD1=min; ST.aD2=mid; ST.bD1=midNext; ST.bD2=max;
+  const set=(id,v)=>{const e=$(id); e.min=min; e.max=max; e.value=v;};
+  set('#aD1',min); set('#aD2',mid); set('#bD1',midNext); set('#bD2',max);
+  [['#aD1','aD1'],['#aD2','aD2'],['#bD1','bD1'],['#bD2','bD2']].forEach(([id,key])=>{
+    $(id).addEventListener('change',e=>{ST[key]=e.target.value; renderCompare();});
+  });
+})();
 
 /* ===== GO ===== */
 render();
