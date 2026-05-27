@@ -1,4 +1,8 @@
-/* ===== Panel de Ventas SAP — Repuestos CTP ===== */
+/* =====================================================================
+   Panel de Ventas SAP — Repuestos CTP
+   Creado por: ALEXIS RAMIREZ  ·  alias: SHAKDOWS
+   © 2026 Alexis Ramírez (Shakdows). Diseño y desarrollo originales.
+   ===================================================================== */
 let DATA = window.SAP_DATA || [];
 const $ = s => document.querySelector(s);
 const C = { amber:'#f59e0b', amber2:'#fb923c', amberD:'#b45309', teal:'#0ea5a4', blue:'#3b6ef5',
