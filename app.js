@@ -1,8 +1,9 @@
 /* ===== Panel de Ventas SAP — Repuestos CTP ===== */
 const DATA = window.SAP_DATA || [];
 const $ = s => document.querySelector(s);
-const C = { amber:'#ffb020', amber2:'#ff8c00', teal:'#2dd4bf', blue:'#5b9dff',
-            red:'#ff5d5d', green:'#3ddc84', violet:'#a78bfa', mut:'#8a97ab', line:'#232c3b' };
+const C = { amber:'#f59e0b', amber2:'#fb923c', amberD:'#b45309', teal:'#0ea5a4', blue:'#3b6ef5',
+            red:'#f43f5e', green:'#10b981', greenD:'#047857', violet:'#7c5cfc',
+            mut:'#5a6781', mut2:'#94a0b4', line:'#e6eaf1', surface:'#ffffff' };
 const GRP = {1:'Cliente local final', 2:'Cliente local revendedor'};
 const DOW = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 
@@ -16,6 +17,11 @@ const short = (s,n=34) => s.length>n ? s.slice(0,n-1)+'…' : s;
 Chart.defaults.color = C.mut;
 Chart.defaults.font.family = "'Manrope',sans-serif";
 Chart.defaults.font.size = 11.5;
+Chart.defaults.plugins.tooltip.backgroundColor = '#14213d';
+Chart.defaults.plugins.tooltip.padding = 11;
+Chart.defaults.plugins.tooltip.cornerRadius = 9;
+Chart.defaults.plugins.tooltip.titleFont = {weight:'700',size:12};
+Chart.defaults.plugins.tooltip.bodyFont = {weight:'600',size:12};
 
 /* ===== STATE ===== */
 const ST = { cli:'', ven:'', lf:'', grp:'', doc:'', d1:'', d2:'', trend:'tv',
@@ -76,20 +82,23 @@ function renderKPIs(rows){
   const mPct = venta ? margen/venta*100 : 0;
   const ticket = docs ? venta/docs : 0;
   const k = [
-    {l:'Venta total',v:fUSD(venta),s:`${fNum(rows.length)} líneas · ${fNum(cant)} u.`,c:C.amber,
+    {l:'Venta total',v:fUSD(venta),s:`${fNum(rows.length)} líneas · ${fNum(cant)} u.`,c:C.amber,bg:'#fff7ea',
       i:'<path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'},
-    {l:'Margen total',v:fUSD(margen),s:`Margen <b>${fPct(mPct)}</b>`,c:C.green,
+    {l:'Margen total',v:fUSD(margen),s:`Margen <b>${fPct(mPct)}</b>`,c:C.green,bg:'#e9f9f1',
       i:'<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>'},
-    {l:'Costo total',v:fUSD(costo),s:'Costo de mercadería',c:C.red,
+    {l:'Costo total',v:fUSD(costo),s:'Costo de mercadería',c:C.red,bg:'#ffe9ec',
       i:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>'},
-    {l:'Documentos',v:fNum(docs),s:`Ticket prom. <b>${fUSD2(ticket)}</b>`,c:C.blue,
+    {l:'Documentos',v:fNum(docs),s:`Ticket prom. <b>${fUSD2(ticket)}</b>`,c:C.blue,bg:'#eaf1ff',
       i:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'},
-    {l:'Clientes activos',v:fNum(clis),s:`${(venta/Math.max(clis,1)).toLocaleString('en-US',{maximumFractionDigits:0,style:'currency',currency:'USD'})} / cliente`,c:C.violet,
+    {l:'Clientes activos',v:fNum(clis),s:`${(venta/Math.max(clis,1)).toLocaleString('en-US',{maximumFractionDigits:0,style:'currency',currency:'USD'})} / cliente`,c:C.violet,bg:'#f1ecff',
       i:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>'},
   ];
   $('#kpis').innerHTML = k.map(x=>`
-    <div class="kpi" style="--accent:${x.c}">
-      <div class="klbl"><svg class="kico" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${x.i}</svg>${x.l}</div>
+    <div class="kpi" style="--accent:${x.c};--accent-bg:${x.bg}">
+      <div class="khead">
+        <div class="klbl">${x.l}</div>
+        <div class="kico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${x.i}</svg></div>
+      </div>
       <div class="kval">${x.v}</div>
       <div class="ksub">${x.s}</div>
     </div>`).join('');
@@ -110,8 +119,8 @@ function renderTrend(rows){
   const col = mode==='m'?C.green: mode==='tr'?C.blue: C.amber;
   mk('#cTrend',{type:'line',data:{labels:lbls,datasets:[{data:vals,
     borderColor:col,borderWidth:2.5,tension:.35,fill:true,pointRadius:3,pointHoverRadius:6,
-    pointBackgroundColor:col,pointBorderColor:'#11161f',pointBorderWidth:2,
-    backgroundColor:ctx=>{const c=ctx.chart.ctx.createLinearGradient(0,0,0,340);c.addColorStop(0,col+'44');c.addColorStop(1,col+'02');return c;}}]},
+    pointBackgroundColor:col,pointBorderColor:'#ffffff',pointBorderWidth:2,
+    backgroundColor:ctx=>{const c=ctx.chart.ctx.createLinearGradient(0,0,0,340);c.addColorStop(0,col+'33');c.addColorStop(1,col+'04');return c;}}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false},
       tooltip:{callbacks:{label:c=>mode==='tr'?fNum(c.parsed.y)+' transacciones':fUSD2(c.parsed.y)}}},
       scales:{x:{...noGrid,ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}},
@@ -123,7 +132,7 @@ function renderGroup(rows){
   const ids=[1,2].filter(i=>m[i]);
   mk('#cGroup',{type:'doughnut',data:{labels:ids.map(i=>GRP[i]),
     datasets:[{data:ids.map(i=>m[i].venta),backgroundColor:[C.blue,C.violet],
-      borderColor:'#161c27',borderWidth:3,hoverOffset:6}]},
+      borderColor:'#ffffff',borderWidth:3,hoverOffset:6}]},
     options:{maintainAspectRatio:false,cutout:'62%',
       plugins:{legend:{position:'bottom',labels:{padding:14,boxWidth:10,boxHeight:10,usePointStyle:true,font:{size:12,weight:'600'}}},
         tooltip:{callbacks:{label:c=>{const t=c.dataset.data.reduce((a,b)=>a+b,0);return ` ${fUSD2(c.parsed)} · ${(c.parsed/t*100).toFixed(1)}%`;}}}}}});
@@ -135,7 +144,7 @@ function renderVen(rows){
   const lbl=arr.map(x=> x.k.split(' ')[0]+' '+(x.k.split(' ')[1]||'').slice(0,1)+'.');
   mk('#cVen',{type:'bar',data:{labels:lbl,datasets:[
     {label:'Venta',data:arr.map(x=>x.venta),backgroundColor:C.amber,borderRadius:5,maxBarThickness:30},
-    {label:'Margen',data:arr.map(x=>x.margen),backgroundColor:C.green+'cc',borderRadius:5,maxBarThickness:30}]},
+    {label:'Margen',data:arr.map(x=>x.margen),backgroundColor:C.green,borderRadius:5,maxBarThickness:30}]},
     options:{maintainAspectRatio:false,plugins:{legend:{position:'top',align:'end',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,padding:12}},
       tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`,
         afterBody:items=>{const i=items[0].dataIndex;return 'Margen '+fPct(arr[i].margen/arr[i].venta*100);}}}},
@@ -159,7 +168,7 @@ function renderScatter(rows){
   const maxV=Math.max(...arr.map(x=>x.venta));
   mk('#cScatter',{type:'bubble',data:{datasets:[{
     data:arr.map(x=>({x:x.venta,y:x.venta?x.margen/x.venta*100:0,r:6+Math.sqrt(x.venta/maxV)*26,lbl:x.k})),
-    backgroundColor:C.teal+'55',borderColor:C.teal,borderWidth:1.5}]},
+    backgroundColor:C.teal+'40',borderColor:C.teal,borderWidth:1.5}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false},
       tooltip:{callbacks:{label:c=>{const d=c.raw;return [d.lbl,`Venta ${fUSD(d.x)} · Margen ${d.y.toFixed(1)}%`];}}}},
       scales:{x:{...gridOpt,type:'logarithmic',title:{display:true,text:'Venta US$ (log)',color:C.mut,font:{size:10}},ticks:{callback:v=>'$'+(v>=1000?(v/1000)+'k':v)}},
@@ -171,7 +180,7 @@ function renderDow(rows){
   rows.forEach(r=>{ const d=new Date(r.f+'T00:00:00').getDay(); m[d]+=r.tv; });
   const order=[1,2,3,4,5,6,0];
   mk('#cDow',{type:'bar',data:{labels:order.map(i=>DOW[i].slice(0,3)),
-    datasets:[{data:order.map(i=>m[i]),backgroundColor:order.map(i=> i===0?C.line:C.blue),borderRadius:6,maxBarThickness:42}]},
+    datasets:[{data:order.map(i=>m[i]),backgroundColor:order.map(i=> i===0?'#d3dae5':C.blue),borderRadius:6,maxBarThickness:42}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false},
       tooltip:{callbacks:{title:items=>DOW[order[items[0].dataIndex]],label:c=>' '+fUSD2(c.parsed.y)}}},
       scales:{x:{...noGrid,ticks:{font:{weight:'600'}}},y:{...gridOpt,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}}}}});
