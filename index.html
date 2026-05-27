@@ -132,6 +132,81 @@ header{
 .seg{display:inline-flex;background:var(--surface2);border:1px solid var(--line2);border-radius:10px;padding:3px;gap:2px}
 .seg button{background:transparent;border:none;color:var(--ink2);font-family:'Manrope';font-weight:700;font-size:11.5px;padding:6px 12px;border-radius:7px;cursor:pointer;transition:.15s}
 .seg button.on{background:var(--amber);color:#fff;box-shadow:0 1px 3px rgba(245,158,11,.4)}
+.seg.sm button{padding:5px 10px;font-size:11px}
+.seg.sm button.on{background:var(--ink);box-shadow:none}
+.trend-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+
+/* ===== HEATMAP ===== */
+#heatWrap{padding:6px 2px 2px}
+.heat-grid{display:grid;grid-template-columns:auto repeat(7,1fr);gap:5px;align-items:center}
+.heat-cell{aspect-ratio:1.45/1;border-radius:7px;background:var(--surface2);border:1px solid var(--line);
+  display:grid;place-items:center;font-family:'Spline Sans Mono';font-size:10px;font-weight:600;color:var(--ink2);
+  position:relative;cursor:default;transition:transform .12s,box-shadow .12s;min-height:34px}
+.heat-cell.has:hover{transform:scale(1.08);box-shadow:var(--sh);z-index:2}
+.heat-cell .dn{position:absolute;top:3px;left:5px;font-size:8.5px;opacity:.55}
+.heat-cell.empty{background:transparent;border-color:transparent}
+.heat-dow{font-size:9.5px;font-weight:700;color:var(--ink3);text-transform:uppercase;text-align:center;letter-spacing:.03em;padding-bottom:2px}
+.heat-wk{font-size:9.5px;font-weight:700;color:var(--ink3);font-family:'Spline Sans Mono';padding-right:6px;text-align:right;white-space:nowrap}
+.heat-scale{display:flex;align-items:center;gap:7px;margin-top:14px;font-size:11px;color:var(--ink3);font-weight:600;justify-content:flex-end}
+.heat-scale .sw{width:15px;height:13px;border-radius:4px;border:1px solid var(--line)}
+.heat-tip{position:fixed;background:#14213d;color:#fff;padding:8px 11px;border-radius:9px;font-size:12px;font-weight:600;pointer-events:none;opacity:0;transition:opacity .12s;z-index:99;box-shadow:var(--sh-lg);white-space:nowrap}
+.heat-tip b{color:var(--amber);font-family:'Spline Sans Mono'}
+
+/* ===== TOOLBAR BUTTONS ===== */
+.toolbar-btns{display:flex;gap:9px;align-items:center}
+.btn{font-size:12.5px;font-weight:700;border-radius:9px;padding:8px 14px;cursor:pointer;transition:.15s;border:1px solid var(--line2);background:var(--surface2);color:var(--ink2);display:inline-flex;align-items:center;gap:7px}
+.btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2}
+.btn:hover{background:#fff;border-color:var(--amber);color:var(--amber-d)}
+.btn.primary{background:var(--amber);border-color:var(--amber);color:#fff;box-shadow:0 2px 8px -2px rgba(245,158,11,.5)}
+.btn.primary:hover{background:#e08e08;color:#fff}
+
+/* ===== INFO TOGGLE ===== */
+.info-btn{width:22px;height:22px;border-radius:50%;border:1px solid var(--line2);background:var(--surface2);color:var(--ink3);font-size:12px;font-weight:700;cursor:pointer;display:grid;place-items:center;font-family:'Archivo';flex:none;transition:.15s;line-height:1}
+.info-btn:hover{border-color:var(--amber);color:var(--amber-d)}
+.info-box{background:var(--surface2);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:9px;padding:11px 14px;margin-bottom:14px;font-size:12.5px;color:var(--ink2);line-height:1.55;font-weight:500;display:none}
+.info-box.show{display:block;animation:fade .25s ease}
+.info-box b{color:var(--ink)}
+
+/* ===== INSIGHTS (analista automático) ===== */
+.insights{background:linear-gradient(135deg,#fffdf7,#fff);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:var(--sh);margin-bottom:24px;position:relative;overflow:hidden}
+.insights::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--amber),#fb923c,var(--violet))}
+.insights .ih{display:flex;align-items:center;gap:11px;margin-bottom:5px}
+.insights .ibadge{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--violet),#9d7bff);display:grid;place-items:center;flex:none;box-shadow:0 4px 12px -3px rgba(124,92,252,.5)}
+.insights .ibadge svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2}
+.insights h3{font-family:'Archivo';font-weight:800;font-size:16px;color:var(--ink);letter-spacing:-.01em}
+.insights .isub{font-size:12px;color:var(--ink3);font-weight:600;margin-bottom:16px;margin-left:49px}
+.ins-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.ins{display:flex;gap:11px;padding:13px 14px;border-radius:11px;background:var(--surface);border:1px solid var(--line);align-items:flex-start}
+.ins .ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex:none;font-size:15px}
+.ins .ic svg{width:16px;height:16px;fill:none;stroke-width:2.2}
+.ins.good .ic{background:#e9f9f1}.ins.good .ic svg{stroke:var(--emerald-d)}
+.ins.warn .ic{background:#fff1e6}.ins.warn .ic svg{stroke:#d97706}
+.ins.alert .ic{background:#ffe9ec}.ins.alert .ic svg{stroke:var(--rose)}
+.ins.info .ic{background:#eaf1ff}.ins.info .ic svg{stroke:var(--blue)}
+.ins .itxt{font-size:12.8px;line-height:1.5;font-weight:500;color:var(--ink2)}
+.ins .itxt b{color:var(--ink);font-weight:700}
+.ins .itxt .big{font-family:'Spline Sans Mono';font-weight:700;color:var(--ink)}
+
+/* ===== COMPARADOR ===== */
+.cmp-ctrl{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+.cmp-side{border:1px solid var(--line);border-radius:13px;padding:14px 16px;background:var(--surface2)}
+.cmp-side.a{border-top:3px solid var(--amber)}
+.cmp-side.b{border-top:3px solid var(--blue)}
+.cmp-side .lab{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin-bottom:11px;display:flex;align-items:center;gap:7px}
+.cmp-side.a .lab{color:var(--amber-d)}.cmp-side.b .lab{color:#2952c8}
+.cmp-side .lab .d{width:9px;height:9px;border-radius:3px}
+.cmp-side.a .lab .d{background:var(--amber)}.cmp-side.b .lab .d{background:var(--blue)}
+.cmp-dates{display:flex;gap:9px}
+.cmp-dates .field{flex:1}
+.cmp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+.cmpk{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface)}
+.cmpk .l{font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.03em}
+.cmpk .vals{display:flex;align-items:baseline;gap:8px;margin-top:9px;font-family:'Spline Sans Mono'}
+.cmpk .va{font-size:18px;font-weight:700;color:var(--amber-d)}
+.cmpk .vb{font-size:18px;font-weight:700;color:#2952c8}
+.cmpk .sep{color:var(--ink3);font-size:13px;font-weight:600}
+.cmpk .delta{margin-top:9px;font-size:12.5px;font-weight:700;font-family:'Spline Sans Mono';display:inline-flex;align-items:center;gap:4px}
+.cmpk .delta.up{color:var(--emerald-d)}.cmpk .delta.down{color:var(--rose)}.cmpk .delta.flat{color:var(--ink3)}
 
 /* ===== TABLE ===== */
 .tbl-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line)}
@@ -199,7 +274,10 @@ footer code{font-family:'Spline Sans Mono';font-size:11.5px;background:var(--sur
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
         Filtros
       </div>
-      <button class="btn-reset" id="resetBtn">↺ Limpiar todo</button>
+      <div class="toolbar-btns">
+        <button class="btn primary" id="exportBtn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV</button>
+        <button class="btn" id="resetBtn">↺ Limpiar todo</button>
+      </div>
     </div>
     <div class="fgrid">
       <div class="field"><label>Buscar cliente</label><input id="fCli" placeholder="Nombre del cliente…" autocomplete="off"></div>
@@ -216,18 +294,35 @@ footer code{font-family:'Spline Sans Mono';font-size:11.5px;background:var(--sur
   <!-- KPIs -->
   <div class="kpis" id="kpis"></div>
 
+  <!-- ANALISTA AUTOMATICO -->
+  <div class="insights" id="insights">
+    <div class="ih">
+      <div class="ibadge"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2Z"/><line x1="9" y1="21" x2="15" y2="21"/><line x1="10" y1="18" x2="10" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/></svg></div>
+      <h3>Analista automático</h3>
+    </div>
+    <div class="isub">Lecturas generadas sobre los datos filtrados — patrones, riesgos y oportunidades que no saltan a la vista</div>
+    <div class="ins-grid" id="insGrid"></div>
+  </div>
+
   <!-- TENDENCIA + MIX -->
   <div class="section-ttl">Evolución y composición</div>
   <div class="grid g2">
     <div class="card">
-      <h3>Tendencia diaria
+      <h3>Tendencia
         <span class="seg" id="trendSeg">
           <button data-m="tv" class="on">Venta</button>
           <button data-m="m">Margen</button>
           <button data-m="tr">Trans.</button>
         </span>
       </h3>
-      <div class="desc">Evolución del indicador seleccionado por día de venta</div>
+      <div class="trend-bar">
+        <span class="desc" style="margin:0">Evolución del indicador por periodo</span>
+        <span class="seg sm" id="granSeg">
+          <button data-g="d" class="on">Día</button>
+          <button data-g="w">Semana</button>
+          <button data-g="mo">Mes</button>
+        </span>
+      </div>
       <div class="chart-box tall"><canvas id="cTrend"></canvas></div>
     </div>
     <div class="card">
@@ -237,17 +332,63 @@ footer code{font-family:'Spline Sans Mono';font-size:11.5px;background:var(--sur
     </div>
   </div>
 
+  <!-- ANALISIS TEMPORAL -->
+  <div class="section-ttl">Análisis temporal</div>
+  <div class="grid g2b">
+    <div class="card">
+      <h3>Venta acumulada <span style="display:flex;gap:8px;align-items:center"><span class="tag">Periodo a la fecha</span><button class="info-btn" title="¿Cómo leer este gráfico?">i</button></span></h3>
+      <div class="desc">Suma corrida de venta y margen — ritmo de crecimiento del periodo</div>
+      <div class="info-box">La curva <b>siempre sube</b> porque acumula día a día. Mientras más empinada, más rápido se vendió en esos días. La línea punteada verde es el <b>margen acumulado</b>; la separación entre ambas curvas representa el costo.</div>
+      <div class="chart-box"><canvas id="cCumul"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Mapa de calor diario <span style="display:flex;gap:8px;align-items:center"><span class="tag" id="heatLeg">Venta por día</span><button class="info-btn" title="¿Cómo leer este gráfico?">i</button></span></h3>
+      <div class="desc">Intensidad de venta por día · filas = semanas, columnas = día de semana</div>
+      <div class="info-box">Cada celda es <b>un día</b>. Mientras más intenso el ámbar, más se vendió. Las filas son semanas (lunes→domingo). Las celdas en blanco son días <b>sin ventas</b> (normalmente domingos). Pasa el cursor para ver el monto exacto.</div>
+      <div id="heatWrap"></div>
+    </div>
+  </div>
+
+  <!-- COMPARADOR -->
+  <div class="section-ttl">Comparador de periodos</div>
+  <div class="grid">
+    <div class="card">
+      <h3>Periodo A vs Periodo B <span class="tag">Respeta los demás filtros</span></h3>
+      <div class="desc">Define dos rangos de fecha y compara su rendimiento lado a lado. Útil para medir crecimiento entre semanas, quincenas o campañas.</div>
+      <div class="cmp-ctrl">
+        <div class="cmp-side a">
+          <div class="lab"><span class="d"></span>Periodo A</div>
+          <div class="cmp-dates">
+            <div class="field"><label>Desde</label><input id="aD1" type="date"></div>
+            <div class="field"><label>Hasta</label><input id="aD2" type="date"></div>
+          </div>
+        </div>
+        <div class="cmp-side b">
+          <div class="lab"><span class="d"></span>Periodo B</div>
+          <div class="cmp-dates">
+            <div class="field"><label>Desde</label><input id="bD1" type="date"></div>
+            <div class="field"><label>Hasta</label><input id="bD2" type="date"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cmp-kpis" id="cmpKpis"></div>
+      <div class="chart-box tall"><canvas id="cCmp"></canvas></div>
+    </div>
+  </div>
+
   <!-- VENDEDORES + LINEAS -->
   <div class="section-ttl">Rendimiento por dimensión</div>
   <div class="grid g2b">
     <div class="card">
-      <h3>Vendedores <span class="tag">Venta vs Margen</span></h3>
+      <h3>Vendedores <span style="display:flex;gap:8px;align-items:center"><span class="tag">Venta vs Margen</span><button class="info-btn" title="¿Cómo leer este gráfico?">i</button></span></h3>
       <div class="desc">Ranking por venta total con margen superpuesto</div>
+      <div class="info-box">Barras ámbar = <b>venta</b>; barras verdes = <b>margen en US$</b> (eje izquierdo). La línea morada = <b>margen %</b> (eje derecho). Clave: un vendedor puede vender mucho con margen % bajo, o vender poco pero muy rentable.</div>
       <div class="chart-box tall"><canvas id="cVen"></canvas></div>
     </div>
     <div class="card">
-      <h3>Top líneas / familias <span class="tag">Top 12</span></h3>
+      <h3>Top líneas / familias <span style="display:flex;gap:8px;align-items:center"><span class="tag">Top 12</span><button class="info-btn" title="¿Cómo leer este gráfico?">i</button></span></h3>
       <div class="desc">Familias de repuestos con mayor facturación</div>
+      <div class="info-box">Las 12 familias que más facturan en el periodo filtrado. El tooltip añade el <b>margen %</b> y el nº de transacciones de cada familia.</div>
       <div class="chart-box tall"><canvas id="cLf"></canvas></div>
     </div>
   </div>
@@ -255,13 +396,15 @@ footer code{font-family:'Spline Sans Mono';font-size:11.5px;background:var(--sur
   <!-- MARGEN SCATTER + DOW -->
   <div class="grid g2b">
     <div class="card">
-      <h3>Rentabilidad de familias <span class="tag">Venta × Margen %</span></h3>
+      <h3>Rentabilidad de familias <span style="display:flex;gap:8px;align-items:center"><span class="tag">Venta × Margen %</span><button class="info-btn" title="¿Cómo leer este gráfico?">i</button></span></h3>
       <div class="desc">Burbuja = volumen de venta · eje Y = margen %. Cuadrante superior-derecho = ideal</div>
+      <div class="info-box">Cada burbuja es una <b>familia de repuestos</b>. Eje X = cuánto vende (escala logarítmica). Eje Y = su <b>margen %</b>. El tamaño de la burbuja también refleja el volumen. Lo ideal es <b>arriba-derecha</b>: vende mucho y deja buen margen. Abajo-derecha = mucho volumen pero poco rentable.</div>
       <div class="chart-box"><canvas id="cScatter"></canvas></div>
     </div>
     <div class="card">
-      <h3>Estacionalidad semanal <span class="tag">Día de semana</span></h3>
+      <h3>Estacionalidad semanal <span style="display:flex;gap:8px;align-items:center"><span class="tag">Día de semana</span><button class="info-btn" title="¿Cómo leer este gráfico?">i</button></span></h3>
       <div class="desc">Venta acumulada por día de la semana</div>
+      <div class="info-box">Suma la venta de cada día de la semana en todo el periodo. Sirve para ver qué días concentran la actividad y planificar stock, personal o promociones.</div>
       <div class="chart-box"><canvas id="cDow"></canvas></div>
     </div>
   </div>
