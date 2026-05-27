@@ -484,6 +484,47 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
   </div>
 
   <!-- COMPARADOR -->
+  <div class="section-ttl">Análisis de ganancia (margen)</div>
+  <div class="grid g2b">
+    <div class="card">
+      <h3>Ganancia real del periodo
+        <span style="display:flex;gap:8px;align-items:center"><span class="tag">Venta vs Costo vs Margen</span><button class="info-btn" title="¿Cómo leer este gráfico?">i</button></span>
+      </h3>
+      <div class="desc">De cada dólar vendido, cuánto fue costo y cuánto quedó como ganancia</div>
+      <div class="info-box">Las barras muestran <b>Venta</b> (ámbar) descompuesta en <b>Costo</b> (rosa) y <b>Margen</b> (verde, tu ganancia real). La línea morada es el <b>margen %</b> diario: qué porcentaje de cada venta se convirtió en ganancia. Mientras más alta esa línea, más rentable fue ese día.</div>
+      <div class="chart-box tall"><canvas id="cGain"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Composición de la ganancia
+        <span style="display:flex;gap:8px;align-items:center"><span class="tag">Top 10 + Resto</span><button class="info-btn" title="¿Cómo leer este gráfico?">i</button></span>
+      </h3>
+      <div class="desc">Qué peso tiene cada vendedor en el margen total generado</div>
+      <div class="info-box">Anillo dividido por el <b>margen US$</b> que aportó cada vendedor. Los 10 principales se muestran individualmente; los demás se agrupan en "Resto". Pasa el cursor para ver el % y el monto exacto.</div>
+      <div class="chart-box tall"><canvas id="cGainMix"></canvas></div>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <h3>Productos que generan la ganancia
+        <span style="display:flex;gap:8px;align-items:center"><span class="tag">Top 20 SKUs por margen</span><button class="info-btn" title="¿Cómo leer este gráfico?">i</button></span>
+      </h3>
+      <div class="desc">Los 20 productos que aportaron más ganancia · barra ámbar = venta · barra verde = ganancia · línea morada = margen %</div>
+      <div class="info-box">Para cada SKU se muestran tres cosas al mismo tiempo: cuánto se <b>vendió</b> (ámbar, eje izquierdo), cuánta <b>ganancia</b> dejó (verde, eje izquierdo) y su <b>rentabilidad %</b> (línea morada, eje derecho). Útil para ver qué productos venden mucho con margen bueno vs. los que venden mucho pero dejan poco.</div>
+      <div class="chart-box tall" style="height:380px"><canvas id="cSkuGain"></canvas></div>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <h3>Vendedores que generan la ganancia
+        <span style="display:flex;gap:8px;align-items:center"><span class="tag">Ranking por margen</span><button class="info-btn" title="¿Cómo leer este gráfico?">i</button></span>
+      </h3>
+      <div class="desc">No por cuánto venden — por cuánta ganancia generan realmente</div>
+      <div class="info-box">Ordenados por <b>ganancia US$</b> aportada (de mayor a menor). La columna verde es el margen absoluto; la línea morada muestra su <b>margen %</b> (qué tan rentables son sus ventas). Un vendedor con buen margen US$ y buen margen % es ideal; alguien con mucho margen US$ pero margen % bajo está vendiendo mucho a precio justo, mientras que margen % alto con margen US$ bajo vende poco pero rentable.</div>
+      <div class="chart-box tall"><canvas id="cVenGain"></canvas></div>
+    </div>
+  </div>
+
+  <!-- COMPARADOR -->
   <div class="section-ttl">Comparador de periodos</div>
   <div class="grid">
     <div class="card">
