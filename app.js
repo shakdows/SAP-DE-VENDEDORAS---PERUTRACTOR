@@ -187,6 +187,7 @@ function renderCumul(rows){
         tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`}}},
       scales:{x:{...noGrid,ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:10}},
         y:{...gridOpt,beginAtZero:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}}}}});
+  applyToggles('cumulToggles','#cCumul');
 }
 
 /* ===== MAPA DE CALOR DIARIO ===== */
@@ -257,6 +258,7 @@ function renderVen(rows){
       scales:{x:{...noGrid,ticks:{font:{size:10}}},
         y:{...gridOpt,beginAtZero:true,position:'left',ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}},
         y1:{position:'right',beginAtZero:true,grid:{display:false},border:{display:false},ticks:{callback:v=>v+'%',color:C.violet,font:{weight:'600'}}}}}});
+  applyToggles('venToggles','#cVen');
 }
 
 function renderLf(rows){
@@ -759,6 +761,7 @@ function renderGain(rows){
       scales:{x:{...noGrid,stacked:true,ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}},
         y:{...gridOpt,stacked:true,beginAtZero:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'},title:{display:true,text:'US$',color:C.mut,font:{size:10}}},
         y1:{position:'right',grid:{display:false},border:{display:false},min:0,suggestedMax:60,ticks:{callback:v=>v+'%',color:C.violet,font:{weight:'600'}},title:{display:true,text:'Margen %',color:C.violet,font:{size:10}}}}}});
+  applyToggles('gainToggles','#cGain');
 }
 
 function renderGainMix(rows){
@@ -850,13 +853,27 @@ function renderSkuList(){
 }
 
 function applySkuToggles(){
-  const ch = charts['#cSkuGain']; if(!ch) return;
-  document.querySelectorAll('#skuToggles .series-tog').forEach(t=>{
-    const i = parseInt(t.dataset.s,10);
-    const visible = t.classList.contains('on');
-    ch.setDatasetVisibility(i, visible);
+  applyToggles('skuToggles','#cSkuGain');
+}
+
+/* ===== GENERIC SERIES TOGGLES =====
+   Reusable across charts: read the .on state of each button in a toggle group
+   and apply it to the matching dataset of the chart. */
+function applyToggles(togglesId, canvasId){
+  const ch = charts[canvasId]; if(!ch) return;
+  const el = document.getElementById(togglesId); if(!el) return;
+  el.querySelectorAll('.series-tog').forEach(b=>{
+    const i = parseInt(b.dataset.s, 10);
+    ch.setDatasetVisibility(i, b.classList.contains('on'));
   });
   ch.update();
+}
+function bindToggles(togglesId, canvasId){
+  const el = document.getElementById(togglesId); if(!el) return;
+  el.querySelectorAll('.series-tog').forEach(t=>t.onclick=()=>{
+    t.classList.toggle('on');
+    applyToggles(togglesId, canvasId);
+  });
 }
 
 function renderVenGain(rows){
@@ -873,6 +890,7 @@ function renderVenGain(rows){
       scales:{x:{...noGrid,ticks:{font:{size:10}}},
         y:{...gridOpt,beginAtZero:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}},
         y1:{position:'right',grid:{display:false},border:{display:false},min:0,suggestedMax:60,ticks:{callback:v=>v+'%',color:C.violet,font:{weight:'600'}}}}}});
+  applyToggles('venGainToggles','#cVenGain');
 }
 
 /* ===== COMPARADOR DE PERIODOS ===== */
@@ -917,6 +935,7 @@ function renderCompare(){
       title:{display:true,text:'Venta por familia: A vs B',color:C.mut,font:{size:12,weight:'600'},padding:{bottom:8}},
       tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`}}},
       scales:{x:{...noGrid,ticks:{font:{size:10}}},y:{...gridOpt,beginAtZero:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}}}}});
+  applyToggles('cmpToggles','#cCmp');
 }
 
 
@@ -979,6 +998,10 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
 document.querySelectorAll('#skuToggles .series-tog').forEach(t=>t.onclick=()=>{
   t.classList.toggle('on'); applySkuToggles();
 });
+
+// Series toggles de los demás gráficos (botones tipo "leyenda filtrable")
+['cumulToggles->#cCumul','gainToggles->#cGain','venToggles->#cVen','venGainToggles->#cVenGain','cmpToggles->#cCmp']
+  .forEach(p=>{const [t,c]=p.split('->'); bindToggles(t,c);});
 
 // Orden de la lista detallada de SKUs
 document.querySelectorAll('#skuListSeg button').forEach(b=>b.onclick=()=>{
