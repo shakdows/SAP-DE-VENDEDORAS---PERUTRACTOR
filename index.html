@@ -58,8 +58,16 @@ header{
   padding:8px 13px;border-radius:10px;box-shadow:var(--sh-sm);
 }
 .period b{color:var(--amber-d);font-weight:600}
-.live{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--emerald-d);font-weight:700;letter-spacing:.03em}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--emerald);box-shadow:0 0 0 0 rgba(16,185,129,.5);animation:pulse 2s infinite}
+.live{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.02em;padding:6px 11px;border-radius:9px;border:1px solid var(--line);background:var(--surface)}
+.live .dot{width:7px;height:7px;border-radius:50%;background:var(--emerald);box-shadow:0 0 0 0 rgba(16,185,129,.5);animation:pulse 2s infinite}
+.live.ok{color:var(--emerald-d)}.live.ok .dot{background:var(--emerald)}
+.live.local{color:var(--ink3)}.live.local .dot{background:var(--ink3);animation:none}
+.live.loading{color:var(--amber-d)}.live.loading .dot{background:var(--amber)}
+.live.err{color:var(--rose)}.live.err .dot{background:var(--rose);animation:none}
+.btn.refresh{padding:8px;width:38px;height:38px;justify-content:center}
+.btn.refresh svg{width:16px;height:16px}
+.btn.refresh.spin svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.45)}70%{box-shadow:0 0 0 7px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
 
 /* ===== FILTER BAR ===== */
@@ -260,7 +268,8 @@ footer code{font-family:'Spline Sans Mono';font-size:11.5px;background:var(--sur
       </div>
     </div>
     <div class="spacer"></div>
-    <div class="live"><span class="dot"></span>DATOS CARGADOS</div>
+    <button class="btn refresh" id="refreshBtn" title="Volver a leer el Google Sheet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+    <div class="live local" id="liveStatus"><span class="dot"></span><span class="lt">Cargando…</span></div>
     <div class="period">Periodo <b id="periodLbl">02 — 25 May 2026</b></div>
   </div>
 </header>
