@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<!--
+  ============================================================
+   Panel de Ventas SAP · Repuestos CTP
+   Creado por: ALEXIS RAMIREZ  ·  alias: SHAKDOWS
+   © 2026 Alexis Ramírez (Shakdows). Diseño y desarrollo originales.
+   Prohibida su reproducción o redistribución sin autorización.
+  ============================================================
+-->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -271,9 +279,14 @@ tbody tr:last-child td{border-bottom:none}
 .rk{width:23px;height:23px;border-radius:7px;background:var(--surface2);border:1px solid var(--line);display:grid;place-items:center;font-family:'Spline Sans Mono';font-size:11px;font-weight:700;color:var(--ink2);flex:none}
 .rk.top{background:var(--amber);border-color:var(--amber);color:#fff}
 
-footer{margin-top:40px;padding-top:22px;border-top:1px solid var(--line);color:var(--ink3);font-size:12.5px;text-align:center;font-weight:500}
-footer b{color:var(--ink2)}
-footer code{font-family:'Spline Sans Mono';font-size:11.5px;background:var(--surface2);padding:2px 6px;border-radius:5px;border:1px solid var(--line)}
+footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-align:center}
+.credit-badge{display:inline-flex;align-items:center;gap:9px;font-family:'Archivo';font-weight:800;font-size:14px;color:var(--ink);
+  background:linear-gradient(135deg,#fff7ea,#fff);border:1px solid #fcd9a0;border-radius:30px;padding:9px 18px;box-shadow:var(--sh-sm)}
+.credit-badge svg{width:17px;height:17px;stroke:var(--amber-d)}
+.credit-badge b{color:var(--amber-d);font-weight:800}
+.credit-sub{margin-top:13px;color:var(--ink2);font-size:12.5px;font-weight:600}
+.credit-sub b{color:var(--ink)}
+.credit-copy{margin-top:7px;color:var(--ink3);font-size:11px;font-weight:500}
 .empty{text-align:center;padding:60px 20px;color:var(--ink3);font-weight:600}
 
 @media(max-width:980px){.g2,.g2b{grid-template-columns:1fr}}
@@ -290,7 +303,7 @@ footer code{font-family:'Spline Sans Mono';font-size:11.5px;background:var(--sur
       <div class="logo">CTP</div>
       <div>
         <h1>Panel de Ventas · Repuestos CTP</h1>
-        <div class="sub">Analítica comercial SAP — Maquinaria pesada · Ucayali, Perú</div>
+        <div class="sub">Analítica comercial SAP — Maquinaria pesada · Ucayali, Perú · por <b style="color:var(--amber-d)">Shakdows</b></div>
       </div>
     </div>
     <div class="spacer"></div>
@@ -478,8 +491,12 @@ footer code{font-family:'Spline Sans Mono';font-size:11.5px;background:var(--sur
   </div>
 
   <footer>
-    <b>Repuestos CTP</b> · Panel analítico generado desde export SAP <code>Data_02_05_2026_al_25_05_2026</code> ·
-    4 693 líneas · Todo el procesamiento ocurre en tu navegador.
+    <div class="credit-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V5z"/><path d="m9 12 2 2 4-4"/></svg>
+      Creado por <b>Alexis Ramírez</b> · alias <b>Shakdows</b>
+    </div>
+    <div class="credit-sub"><b>Repuestos CTP</b> · Panel analítico de ventas SAP — Maquinaria pesada, Ucayali · Procesamiento 100% en el navegador</div>
+    <div class="credit-copy">© 2026 Alexis Ramírez (Shakdows). Diseño y desarrollo originales. Prohibida su reproducción sin autorización.</div>
   </footer>
 </div>
 
