@@ -459,13 +459,51 @@ function renderInsights(rows){
     }
   }
   // 6) Mejor / peor día
-  const dAgg={}; rows.forEach(r=>dAgg[r.f]=(dAgg[r.f]||0)+r.tv);
-  const dArr=Object.entries(dAgg).sort((a,b)=>b[1]-a[1]);
+  const dAgg={}; rows.forEach(r=>{const x=dAgg[r.f]||(dAgg[r.f]={tv:0,m:0}); x.tv+=r.tv; x.m+=r.m;});
+  const dArr=Object.entries(dAgg).sort((a,b)=>b[1].tv-a[1].tv);
   if(dArr.length>1){
     const bd=dArr[0]; const dt=new Date(bd[0]+'T00:00:00');
     out.push({t:'info',ic:'cal',type:'day',param:bd[0],
-      h:`Mejor día: <b>${DOW[dt.getDay()]} ${bd[0].slice(8)}/${bd[0].slice(5,7)}</b>`,
-      d:`<span class="big">${fUSD(bd[1])}</span> en ventas — ${(bd[1]/venta*100).toFixed(0)}% de todo el periodo en un solo día.`});
+      h:`Mejor día por venta: <b>${DOW[dt.getDay()]} ${bd[0].slice(8)}/${bd[0].slice(5,7)}</b>`,
+      d:`<span class="big">${fUSD(bd[1].tv)}</span> en ventas — ${(bd[1].tv/venta*100).toFixed(0)}% de todo el periodo en un solo día.`});
+  }
+  // 6b) Mejor día POR MARGEN
+  const dMArr=Object.entries(dAgg).filter(([,v])=>v.m>0).sort((a,b)=>b[1].m-a[1].m);
+  if(dMArr.length>1){
+    const bm=dMArr[0]; const dtm=new Date(bm[0]+'T00:00:00');
+    const mp = bm[1].tv ? bm[1].m/bm[1].tv*100 : 0;
+    // si coincide con el mejor por venta, mostrar igualmente pero con foco en margen
+    out.push({t:'good',ic:'up',type:'day',param:bm[0],
+      h:`Mejor día por margen: <b>${DOW[dtm.getDay()]} ${bm[0].slice(8)}/${bm[0].slice(5,7)}</b>`,
+      d:`<span class="big">${fUSD(bm[1].m)}</span> de margen · ${mp.toFixed(0)}% sobre venta · ${(bm[1].m/margen*100).toFixed(0)}% del margen del periodo.`});
+  }
+  // 6c) Top SKU por margen ABSOLUTO
+  const skuM={};
+  rows.forEach(r=>{const g=skuM[r.sku]||(skuM[r.sku]={d:r.d,lf:r.lf,m:0,tv:0,q:0});g.m+=r.m;g.tv+=r.tv;g.q+=r.q;});
+  const topSkuM=Object.entries(skuM).map(([k,v])=>({k,...v})).sort((a,b)=>b.m-a.m);
+  if(topSkuM.length){
+    const tm=topSkuM[0]; const mp=tm.tv?tm.m/tm.tv*100:0;
+    out.push({t:'star',ic:'star',type:'skuTop',
+      h:`SKU más rentable: <b>${tm.k}</b>`,
+      d:`${short(tm.d,30)} · <span class="big">${fUSD2(tm.m)}</span> de margen (${mp.toFixed(0)}%) en ${fNum(tm.q)} u.`});
+  }
+  // 6d) Top clientes locales finales
+  const finals=rows.filter(r=>r.g===1);
+  if(finals.length){
+    const arrF=Object.entries(groupAgg(finals,'cl')).map(([k,v])=>({k,...v})).sort((a,b)=>b.venta-a.venta);
+    const t=arrF[0]; const vF=sum(finals,'tv');
+    out.push({t:'info',ic:'users',type:'cliGrp',param:'1',
+      h:`Top cliente local final: <b>${t.k.length>22?t.k.slice(0,21)+'…':t.k}</b>`,
+      d:`<span class="big">${fUSD(t.venta)}</span> · ${(t.venta/vF*100).toFixed(0)}% del segmento · ${arrF.length} clientes finales.`});
+  }
+  // 6e) Top clientes revendedores
+  const reseller=rows.filter(r=>r.g===2);
+  if(reseller.length){
+    const arrR=Object.entries(groupAgg(reseller,'cl')).map(([k,v])=>({k,...v})).sort((a,b)=>b.venta-a.venta);
+    const t=arrR[0]; const vR=sum(reseller,'tv');
+    out.push({t:'info',ic:'users',type:'cliGrp',param:'2',
+      h:`Top revendedor: <b>${t.k.length>22?t.k.slice(0,21)+'…':t.k}</b>`,
+      d:`<span class="big">${fUSD(t.venta)}</span> · ${(t.venta/vR*100).toFixed(0)}% del segmento · ${arrR.length} revendedores.`});
   }
   // 7) Notas de crédito
   const nc=rows.filter(r=>r.doc==='NC');
@@ -616,6 +654,70 @@ const DETAIL = {
         + '<p class="mnote">Devoluciones/ajustes del periodo (ya descontados de los totales del panel).</p>'
         + miniTable(['Fecha','Documento','Cliente','SKU','Venta','Margen'], body),
       chart:null};
+  },
+  skuTop(rows){
+    const m={};
+    rows.forEach(r=>{const g=m[r.sku]||(m[r.sku]={d:r.d,lf:r.lf,m:0,tv:0,tc:0,q:0,n:0});g.m+=r.m;g.tv+=r.tv;g.tc+=r.tc;g.q+=r.q;g.n++;});
+    const arr=Object.entries(m).map(([k,v])=>({k,...v,mp:v.tv?v.m/v.tv*100:0}));
+    const topM=arr.slice().sort((a,b)=>b.m-a.m).slice(0,25);
+    const topV=arr.slice().sort((a,b)=>b.tv-a.tv).slice(0,25);
+    // SKUs frecuentes con mejor margen % (filtramos los muy pequeños)
+    const totalV=sum(rows,'tv'), totalM=sum(rows,'m');
+    const topMp=arr.filter(x=>x.tv>=totalV*0.003).sort((a,b)=>b.mp-a.mp).slice(0,15);
+    const bodyM=topM.map((x,i)=>[
+      `<div class="rank"><span class="rk ${i<3?'top':''}">${i+1}</span><span><b style="font-family:'Spline Sans Mono';font-size:11px;color:var(--ink2)">${x.k}</b> ${short(x.d,18)}</span></div>`,
+      `<span class="pill g${x.lf==='SIN LÍNEA'?'1':'1'}" style="background:var(--surface2);color:var(--ink3)">${x.lf}</span>`,
+      fUSD2(x.tv), fNum(x.q), `<b class="pos">${fUSD2(x.m)}</b>`, `<span class="pos">${x.mp.toFixed(0)}%</span>`]);
+    const bodyMp=topMp.map((x,i)=>[
+      `<div class="rank"><span class="rk ${i<3?'top':''}">${i+1}</span><span><b style="font-family:'Spline Sans Mono';font-size:11px;color:var(--ink2)">${x.k}</b> ${short(x.d,18)}</span></div>`,
+      fUSD2(x.tv), `<b class="pos">${fUSD2(x.m)}</b>`, `<span class="pos">${x.mp.toFixed(0)}%</span>`]);
+    return {title:'Top SKUs por margen',
+      html: statRow([{l:'SKUs distintos',v:fNum(arr.length)},{l:'Top 25 aportan',v:fUSD2(topM.reduce((a,x)=>a+x.m,0)),c:'var(--emerald-d)'},{l:'% del margen total',v:(topM.reduce((a,x)=>a+x.m,0)/totalM*100).toFixed(0)+'%'}])
+        + '<div class="mchart"><canvas id="mCanvas"></canvas></div>'
+        + '<p class="mnote">Top 25 SKUs ordenados por <b>margen absoluto en US$</b>. Estos son los productos que más rentabilidad aportan al periodo.</p>'
+        + miniTable(['SKU · Descripción','Familia','Venta','Unid.','Margen','Margen %'], bodyM)
+        + '<p class="mnote" style="margin-top:18px">SKUs con <b>mejor margen %</b> (de productos con venta significativa, ≥0.3% del total):</p>'
+        + miniTable(['SKU · Descripción','Venta','Margen','Margen %'], bodyMp),
+      chart(){ const top=topM.slice(0,12).reverse();
+        modalChart=new Chart($('#mCanvas'),{type:'bar',data:{labels:top.map(x=>x.k+' · '+short(x.d,16)),
+          datasets:[{label:'Margen',data:top.map(x=>x.m),backgroundColor:C.green,borderRadius:5}]},
+          options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'Top 12 SKUs por margen US$',color:C.mut,font:{size:12,weight:'600'}}},
+            scales:{x:{grid:{color:C.line},ticks:{callback:fAx}},y:{grid:{display:false},ticks:{font:{size:10}}}}}}); }};
+  },
+  cliGrp(rows, gid){
+    const g = parseInt(gid,10);
+    const sub = rows.filter(r=>r.g===g);
+    const label = GRP[g];
+    if(!sub.length) return {title:label, html:'<div class="empty">Sin clientes de este segmento en el filtro actual</div>', chart:null};
+    const arr=Object.entries(groupAgg(sub,'cl')).map(([k,v])=>({k,...v,mp:v.venta?v.margen/v.venta*100:0}));
+    const venta=sum(sub,'tv'), margen=sum(sub,'m');
+    const topV=arr.slice().sort((a,b)=>b.venta-a.venta).slice(0,10);
+    const topM=arr.slice().sort((a,b)=>b.margen-a.margen).slice(0,10);
+    const bodyV=topV.map((x,i)=>[
+      `<div class="rank"><span class="rk ${i<3?'top':''}">${i+1}</span>${x.k.length>32?x.k.slice(0,31)+'…':x.k}</div>`,
+      fUSD2(x.venta), (x.venta/venta*100).toFixed(1)+'%', fNum(x.trans),
+      `<span class="${x.margen>=0?'pos':'neg'}">${fUSD2(x.margen)}</span>`, `<span class="${x.margen>=0?'pos':'neg'}">${x.mp.toFixed(0)}%</span>`]);
+    const bodyM=topM.map((x,i)=>[
+      `<div class="rank"><span class="rk ${i<3?'top':''}">${i+1}</span>${x.k.length>32?x.k.slice(0,31)+'…':x.k}</div>`,
+      fUSD2(x.venta), `<b class="${x.margen>=0?'pos':'neg'}">${fUSD2(x.margen)}</b>`, `<span class="${x.margen>=0?'pos':'neg'}">${x.mp.toFixed(0)}%</span>`,
+      (x.margen/margen*100).toFixed(1)+'%']);
+    return {title:'Top 10 · '+label,
+      html: statRow([{l:'Clientes del segmento',v:fNum(arr.length)},{l:'Venta del segmento',v:fUSD(venta),c:'var(--amber-d)'},{l:'Margen del segmento',v:fUSD(margen),c:'var(--emerald-d)'},{l:'Margen %',v:fPct(venta?margen/venta*100:0)}])
+        + '<div class="mchart"><canvas id="mCanvas"></canvas></div>'
+        + '<p class="mnote"><b>Top 10 por venta</b> en el segmento:</p>'
+        + miniTable(['Cliente','Venta','% segm.','Docs.','Margen','Margen %'], bodyV)
+        + '<p class="mnote" style="margin-top:18px"><b>Top 10 por margen</b> en el segmento:</p>'
+        + miniTable(['Cliente','Venta','Margen','Margen %','% del margen segm.'], bodyM),
+      chart(){
+        const labels=topV.map(x=>short(x.k,22)).reverse();
+        const venta_s=topV.map(x=>x.venta).reverse();
+        // mapear margen al mismo orden de topV
+        const margen_s=topV.map(x=>x.margen).reverse();
+        modalChart=new Chart($('#mCanvas'),{type:'bar',data:{labels,datasets:[
+          {label:'Venta',data:venta_s,backgroundColor: g===1?C.blue:C.violet, borderRadius:5},
+          {label:'Margen',data:margen_s,backgroundColor:C.green,borderRadius:5}]},
+          options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{position:'top',align:'end',labels:{usePointStyle:true,boxWidth:9,padding:10}},title:{display:true,text:'Top 10 clientes · venta y margen',color:C.mut,font:{size:12,weight:'600'}}},
+            scales:{x:{grid:{color:C.line},ticks:{callback:fAx}},y:{grid:{display:false},ticks:{font:{size:10}}}}}}); }};
   }
 };
 
