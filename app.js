@@ -834,6 +834,22 @@ $('#mClose').onclick=closeModal;
 $('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
 
+// Reportes rápidos (botones grandes que abren modales)
+document.querySelectorAll('.qr-btn').forEach(b=>b.onclick=()=>{
+  INS_ROWS = applyFilters();  // usa filtros activos
+  const map = {
+    'day-margin': ()=>{
+      const dAgg={}; INS_ROWS.forEach(r=>{const x=dAgg[r.f]||(dAgg[r.f]={tv:0,m:0}); x.tv+=r.tv; x.m+=r.m;});
+      const arr=Object.entries(dAgg).sort((a,b)=>b[1].m-a[1].m);
+      if(arr.length) openInsight('day', arr[0][0]);
+    },
+    'sku-margin': ()=> openInsight('skuTop',''),
+    'cli-final':  ()=> openInsight('cliGrp','1'),
+    'cli-resel':  ()=> openInsight('cliGrp','2'),
+  };
+  const fn = map[b.dataset.qr]; if(fn) fn();
+});
+
 // Info toggles ("¿cómo leer?")
 document.querySelectorAll('.info-btn').forEach(b=>b.onclick=()=>{
   const box=b.closest('.card').querySelector('.info-box');
