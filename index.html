@@ -185,6 +185,26 @@ header{
 .info-box.show{display:block;animation:fade .25s ease}
 .info-box b{color:var(--ink)}
 
+/* ===== REPORTES RÁPIDOS ===== */
+.quick-reports{background:linear-gradient(135deg,#fff,#f9faff);border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:var(--sh);margin-bottom:22px;position:relative;overflow:hidden}
+.quick-reports::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--amber),var(--emerald),var(--blue),var(--violet))}
+.qr-label{display:flex;align-items:center;gap:9px;font-family:'Archivo';font-weight:800;font-size:12.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink);margin-bottom:13px}
+.qr-label svg{width:17px;height:17px;stroke:var(--amber);fill:var(--amber-bg)}
+.qr-btns{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:11px}
+.qr-btn{display:flex;align-items:center;gap:13px;text-align:left;padding:14px 14px 14px 13px;border-radius:13px;
+  background:var(--surface);border:1.5px solid var(--line);cursor:pointer;transition:transform .18s,box-shadow .18s,border-color .18s;
+  font-family:'Manrope';color:var(--ink);min-width:0}
+.qr-btn:hover{transform:translateY(-2px);box-shadow:var(--sh);border-color:var(--amber)}
+.qr-btn:active{transform:translateY(0)}
+.qr-ic{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;flex:none;background:var(--surface2)}
+.qr-ic svg{width:20px;height:20px;stroke-width:2}
+.qr-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.qr-t{font-family:'Archivo';font-size:14px;font-weight:700;color:var(--ink);line-height:1.25}
+.qr-t b{color:var(--amber-d);font-weight:800}
+.qr-d{font-size:11.5px;font-weight:600;color:var(--ink3);line-height:1.3}
+.qr-arr{font-family:'Archivo';font-weight:800;font-size:18px;color:var(--ink3);transition:.18s;flex:none}
+.qr-btn:hover .qr-arr{color:var(--amber);transform:translateX(3px)}
+
 /* ===== INSIGHTS (analista automático) ===== */
 .insights{background:linear-gradient(135deg,#fffdf7,#fff);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:var(--sh);margin-bottom:24px;position:relative;overflow:hidden}
 .insights::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--amber),#fb923c,var(--violet))}
@@ -365,6 +385,48 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
 
   <!-- KPIs -->
   <div class="kpis" id="kpis"></div>
+
+  <!-- REPORTES RAPIDOS -->
+  <div class="quick-reports">
+    <div class="qr-label">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Reportes rápidos
+    </div>
+    <div class="qr-btns">
+      <button class="qr-btn" data-qr="day-margin">
+        <div class="qr-ic" style="background:#e9f9f1;color:var(--emerald-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 11 18 15 14"/></svg></div>
+        <div class="qr-tx">
+          <div class="qr-t">Mejor día por <b>margen</b></div>
+          <div class="qr-d">Qué día rindió más rentabilidad</div>
+        </div>
+        <span class="qr-arr">→</span>
+      </button>
+      <button class="qr-btn" data-qr="sku-margin">
+        <div class="qr-ic" style="background:#fff7ea;color:var(--amber-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.5 4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/></svg></div>
+        <div class="qr-tx">
+          <div class="qr-t">Top SKUs por <b>margen</b></div>
+          <div class="qr-d">Productos que más rentabilidad dejan</div>
+        </div>
+        <span class="qr-arr">→</span>
+      </button>
+      <button class="qr-btn" data-qr="cli-final">
+        <div class="qr-ic" style="background:#eaf1ff;color:#2952c8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="qr-tx">
+          <div class="qr-t">Top 10 <b>clientes finales</b></div>
+          <div class="qr-d">Por venta y por margen</div>
+        </div>
+        <span class="qr-arr">→</span>
+      </button>
+      <button class="qr-btn" data-qr="cli-resel">
+        <div class="qr-ic" style="background:#f1ecff;color:var(--violet)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="qr-tx">
+          <div class="qr-t">Top 10 <b>revendedores</b></div>
+          <div class="qr-d">Por venta y por margen</div>
+        </div>
+        <span class="qr-arr">→</span>
+      </button>
+    </div>
+  </div>
 
   <!-- ANALISTA AUTOMATICO -->
   <div class="insights" id="insights">
