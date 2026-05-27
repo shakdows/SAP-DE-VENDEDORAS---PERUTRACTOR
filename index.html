@@ -206,7 +206,11 @@ header{
 .qr-btn:hover .qr-arr{color:var(--amber);transform:translateX(3px)}
 
 /* ===== SERIES TOGGLES (botones-leyenda) ===== */
-.series-toggles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.series-toggles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+.series-toggles .toggle-label{
+  font-family:'Archivo';font-weight:800;font-size:12px;letter-spacing:.04em;
+  color:var(--ink);text-transform:uppercase;margin-right:4px;
+}
 .series-tog{
   display:inline-flex;align-items:center;gap:8px;cursor:pointer;
   font-family:'Archivo';font-size:12.5px;font-weight:700;color:var(--ink2);
@@ -221,6 +225,10 @@ header{
 .series-tog[data-color="green"].on .dot{background:var(--emerald);box-shadow:0 0 0 3px rgba(16,185,129,.18)}
 .series-tog[data-color="violet"].on{background:#f1ecff;border-color:var(--violet);color:#5b3fc4}
 .series-tog[data-color="violet"].on .dot{background:var(--violet);box-shadow:0 0 0 3px rgba(124,92,252,.18)}
+.series-tog[data-color="rose"].on{background:#ffe9ec;border-color:var(--rose);color:#c01a36}
+.series-tog[data-color="rose"].on .dot{background:var(--rose);box-shadow:0 0 0 3px rgba(244,63,94,.18)}
+.series-tog[data-color="blue"].on{background:#eaf1ff;border-color:var(--blue);color:#2952c8}
+.series-tog[data-color="blue"].on .dot{background:var(--blue);box-shadow:0 0 0 3px rgba(59,110,245,.18)}
 .series-tog:not(.on){opacity:.55}
 .series-tog:not(.on) .dot{background:var(--ink3)!important;box-shadow:none!important}
 .series-tog:hover{transform:translateY(-1px)}
@@ -534,7 +542,7 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
       <h3>Venta acumulada <span style="display:flex;gap:8px;align-items:center"><span class="tag">Periodo a la fecha</span><button class="info-btn" title="¿Cómo leer este gráfico?">i</button></span></h3>
       <div class="desc">Suma corrida de venta y margen — ritmo de crecimiento del periodo</div>
       <div class="info-box">La curva <b>siempre sube</b> porque acumula día a día. Mientras más empinada, más rápido se vendió en esos días. La línea punteada verde es el <b>margen acumulado</b>; la separación entre ambas curvas representa el costo.</div>
-      <div class="chart-box"><canvas id="cCumul"></canvas></div>
+      <div class="series-toggles" id="cumulToggles"><span class="toggle-label">Filtrar:</span><button class="series-tog on" data-s="0" data-color="amber"><span class="dot"></span>Venta acum.</button><button class="series-tog on" data-s="1" data-color="green"><span class="dot"></span>Margen acum.</button></div><div class="chart-box"><canvas id="cCumul"></canvas></div>
     </div>
     <div class="card">
       <h3>Mapa de calor diario <span style="display:flex;gap:8px;align-items:center"><span class="tag" id="heatLeg">Venta por día</span><button class="info-btn" title="¿Cómo leer este gráfico?">i</button></span></h3>
@@ -553,7 +561,7 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
       </h3>
       <div class="desc">De cada dólar vendido, cuánto fue costo y cuánto quedó como ganancia</div>
       <div class="info-box">Las barras muestran <b>Venta</b> (ámbar) descompuesta en <b>Costo</b> (rosa) y <b>Margen</b> (verde, tu ganancia real). La línea morada es el <b>margen %</b> diario: qué porcentaje de cada venta se convirtió en ganancia. Mientras más alta esa línea, más rentable fue ese día.</div>
-      <div class="chart-box tall"><canvas id="cGain"></canvas></div>
+      <div class="series-toggles" id="gainToggles"><span class="toggle-label">Filtrar:</span><button class="series-tog on" data-s="0" data-color="rose"><span class="dot"></span>Costo</button><button class="series-tog on" data-s="1" data-color="green"><span class="dot"></span>Ganancia</button><button class="series-tog on" data-s="2" data-color="violet"><span class="dot"></span>Margen %</button></div><div class="chart-box tall"><canvas id="cGain"></canvas></div>
     </div>
     <div class="card">
       <h3>Composición de la ganancia
@@ -572,6 +580,7 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
       <div class="desc">Los 20 productos que aportaron más ganancia · <b>haz clic en los botones para mostrar/ocultar cada serie</b></div>
       <div class="info-box">Para cada SKU se muestran tres cosas al mismo tiempo: cuánto se <b>vendió</b> (ámbar, eje izquierdo), cuánta <b>ganancia</b> dejó (verde, eje izquierdo) y su <b>rentabilidad %</b> (línea morada, eje derecho). Útil para ver qué productos venden mucho con margen bueno vs. los que venden mucho pero dejan poco.</div>
       <div class="series-toggles" id="skuToggles">
+        <span class="toggle-label">Filtrar:</span>
         <button class="series-tog on" data-s="0" data-color="amber"><span class="dot"></span>Venta</button>
         <button class="series-tog on" data-s="1" data-color="green"><span class="dot"></span>Ganancia</button>
         <button class="series-tog on" data-s="2" data-color="violet"><span class="dot"></span>Margen %</button>
@@ -605,7 +614,7 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
       </h3>
       <div class="desc">No por cuánto venden — por cuánta ganancia generan realmente</div>
       <div class="info-box">Ordenados por <b>ganancia US$</b> aportada (de mayor a menor). La columna verde es el margen absoluto; la línea morada muestra su <b>margen %</b> (qué tan rentables son sus ventas). Un vendedor con buen margen US$ y buen margen % es ideal; alguien con mucho margen US$ pero margen % bajo está vendiendo mucho a precio justo, mientras que margen % alto con margen US$ bajo vende poco pero rentable.</div>
-      <div class="chart-box tall"><canvas id="cVenGain"></canvas></div>
+      <div class="series-toggles" id="venGainToggles"><span class="toggle-label">Filtrar:</span><button class="series-tog on" data-s="0" data-color="green"><span class="dot"></span>Ganancia US$</button><button class="series-tog on" data-s="1" data-color="violet"><span class="dot"></span>Margen %</button></div><div class="chart-box tall"><canvas id="cVenGain"></canvas></div>
     </div>
   </div>
 
@@ -632,7 +641,7 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
         </div>
       </div>
       <div class="cmp-kpis" id="cmpKpis"></div>
-      <div class="chart-box tall"><canvas id="cCmp"></canvas></div>
+      <div class="series-toggles" id="cmpToggles"><span class="toggle-label">Filtrar:</span><button class="series-tog on" data-s="0" data-color="amber"><span class="dot"></span>Periodo A</button><button class="series-tog on" data-s="1" data-color="blue"><span class="dot"></span>Periodo B</button></div><div class="chart-box tall"><canvas id="cCmp"></canvas></div>
     </div>
   </div>
 
@@ -643,7 +652,7 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
       <h3>Vendedores <span style="display:flex;gap:8px;align-items:center"><span class="tag">Venta vs Margen</span><button class="info-btn" title="¿Cómo leer este gráfico?">i</button></span></h3>
       <div class="desc">Ranking por venta total con margen superpuesto</div>
       <div class="info-box">Barras ámbar = <b>venta</b>; barras verdes = <b>margen en US$</b> (eje izquierdo). La línea morada = <b>margen %</b> (eje derecho). Clave: un vendedor puede vender mucho con margen % bajo, o vender poco pero muy rentable.</div>
-      <div class="chart-box tall"><canvas id="cVen"></canvas></div>
+      <div class="series-toggles" id="venToggles"><span class="toggle-label">Filtrar:</span><button class="series-tog on" data-s="0" data-color="amber"><span class="dot"></span>Venta</button><button class="series-tog on" data-s="1" data-color="green"><span class="dot"></span>Margen</button><button class="series-tog on" data-s="2" data-color="violet"><span class="dot"></span>Margen %</button></div><div class="chart-box tall"><canvas id="cVen"></canvas></div>
     </div>
     <div class="card">
       <h3>Top líneas / familias <span style="display:flex;gap:8px;align-items:center"><span class="tag">Top 12</span><button class="info-btn" title="¿Cómo leer este gráfico?">i</button></span></h3>
