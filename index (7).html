@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Repuestos CTP · Panel de Ventas SAP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0d1117; --bg2:#11161f; --panel:#161c27; --panel2:#1b2330;
+  --line:#232c3b; --line2:#2d384a;
+  --txt:#e8edf4; --mut:#8a97ab; --mut2:#5e6c81;
+  --amber:#ffb020; --amber2:#ff8c00; --amber-d:#caa100;
+  --teal:#2dd4bf; --blue:#5b9dff; --red:#ff5d5d; --green:#3ddc84; --violet:#a78bfa;
+  --shadow:0 10px 40px -12px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:
+    radial-gradient(900px 500px at 88% -8%, rgba(255,176,32,.07), transparent 60%),
+    radial-gradient(700px 500px at -5% 8%, rgba(91,157,255,.06), transparent 55%),
+    var(--bg);
+  color:var(--txt); font-family:'Manrope',sans-serif; line-height:1.45;
+  -webkit-font-smoothing:antialiased; min-height:100vh;
+}
+::selection{background:var(--amber);color:#1a1205}
+.wrap{max-width:1480px;margin:0 auto;padding:0 22px 80px}
+
+/* ===== HEADER ===== */
+header{
+  position:sticky;top:0;z-index:50;
+  background:rgba(13,17,23,.82);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+}
+.hd{max-width:1480px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:13px}
+.logo{
+  width:46px;height:46px;border-radius:11px;flex:none;
+  background:linear-gradient(135deg,var(--amber),var(--amber2));
+  display:grid;place-items:center;font-family:'Archivo';font-weight:900;font-size:21px;color:#1a1205;
+  box-shadow:0 6px 20px -6px rgba(255,176,32,.6);position:relative;overflow:hidden;
+}
+.logo::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent 0 6px,rgba(0,0,0,.07) 6px 9px)}
+.brand h1{font-family:'Archivo';font-weight:800;font-size:18px;letter-spacing:-.02em;line-height:1.1}
+.brand .sub{font-size:11.5px;color:var(--mut);font-weight:600;letter-spacing:.02em}
+.hd .spacer{flex:1}
+.period{
+  display:flex;align-items:center;gap:9px;font-family:'Spline Sans Mono';font-size:12px;
+  color:var(--mut);background:var(--panel);border:1px solid var(--line);
+  padding:8px 13px;border-radius:9px;
+}
+.period b{color:var(--amber);font-weight:600}
+.live{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--green);font-weight:700;letter-spacing:.04em}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(61,220,132,.6);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(61,220,132,.5)}70%{box-shadow:0 0 0 8px rgba(61,220,132,0)}100%{box-shadow:0 0 0 0 rgba(61,220,132,0)}}
+
+/* ===== FILTER BAR ===== */
+.filters{
+  margin:22px 0;padding:18px;background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;box-shadow:var(--shadow);
+}
+.filters-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.filters-top .ttl{font-family:'Archivo';font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);display:flex;align-items:center;gap:8px}
+.filters-top .ttl svg{width:15px;height:15px;stroke:var(--amber)}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:13px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:11px;font-weight:700;color:var(--mut2);letter-spacing:.05em;text-transform:uppercase}
+.field select,.field input{
+  background:var(--bg2);border:1px solid var(--line2);color:var(--txt);
+  padding:9px 11px;border-radius:9px;font-family:'Manrope';font-size:13px;font-weight:600;
+  outline:none;transition:.15s;width:100%;
+}
+.field select:focus,.field input:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(255,176,32,.13)}
+.field input::placeholder{color:var(--mut2);font-weight:500}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.chip{
+  display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;
+  background:rgba(255,176,32,.12);border:1px solid rgba(255,176,32,.3);color:var(--amber);
+  padding:5px 10px;border-radius:20px;cursor:pointer;transition:.15s;
+}
+.chip:hover{background:rgba(255,176,32,.2)}
+.chip b{color:var(--txt);font-weight:600}
+.chip .x{font-size:14px;line-height:1;opacity:.7}
+.btn-reset{
+  margin-left:auto;font-size:12px;font-weight:700;color:var(--mut);background:transparent;
+  border:1px solid var(--line2);padding:6px 13px;border-radius:8px;cursor:pointer;transition:.15s;
+}
+.btn-reset:hover{border-color:var(--red);color:var(--red)}
+
+/* ===== KPIs ===== */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:22px}
+.kpi{
+  background:linear-gradient(160deg,var(--panel),var(--panel2));
+  border:1px solid var(--line);border-radius:15px;padding:18px 19px;position:relative;overflow:hidden;
+  transition:.2s;
+}
+.kpi:hover{border-color:var(--line2);transform:translateY(-2px)}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent,var(--amber))}
+.kpi .klbl{font-size:11.5px;font-weight:700;color:var(--mut);letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:7px}
+.kpi .kico{width:16px;height:16px;stroke:var(--accent,var(--amber));flex:none}
+.kpi .kval{font-family:'Spline Sans Mono';font-weight:700;font-size:27px;letter-spacing:-.02em;margin-top:10px;line-height:1}
+.kpi .ksub{font-size:12px;color:var(--mut);margin-top:8px;font-weight:600}
+.kpi .ksub b{color:var(--green)}
+
+/* ===== LAYOUT ===== */
+.section-ttl{font-family:'Archivo';font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:6px 2px 0;display:flex;align-items:center;gap:9px}
+.section-ttl::before{content:"";width:18px;height:2px;background:var(--amber);border-radius:2px}
+.grid{display:grid;gap:18px;margin-top:14px}
+.g2{grid-template-columns:1.55fr 1fr}
+.g2b{grid-template-columns:1fr 1fr}
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;
+  box-shadow:var(--shadow);min-width:0;
+}
+.card h3{font-family:'Archivo';font-weight:700;font-size:14.5px;letter-spacing:-.01em;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+.card h3 .tag{font-family:'Spline Sans Mono';font-size:11px;font-weight:500;color:var(--mut2);background:var(--bg2);padding:3px 8px;border-radius:6px}
+.card .desc{font-size:12px;color:var(--mut2);margin-bottom:14px;font-weight:500}
+.chart-box{position:relative;height:300px}
+.chart-box.tall{height:340px}
+.chart-box.sm{height:260px}
+
+/* segmented control */
+.seg{display:inline-flex;background:var(--bg2);border:1px solid var(--line2);border-radius:9px;padding:3px;gap:2px}
+.seg button{background:transparent;border:none;color:var(--mut);font-family:'Manrope';font-weight:700;font-size:11.5px;padding:5px 11px;border-radius:6px;cursor:pointer;transition:.15s}
+.seg button.on{background:var(--amber);color:#1a1205}
+
+/* ===== TABLE ===== */
+.tbl-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead th{
+  background:var(--bg2);color:var(--mut);font-weight:700;text-align:left;padding:11px 13px;
+  letter-spacing:.03em;text-transform:uppercase;font-size:10.5px;white-space:nowrap;cursor:pointer;
+  user-select:none;border-bottom:1px solid var(--line);position:sticky;top:0;
+}
+thead th:hover{color:var(--amber)}
+thead th .ar{opacity:.5;font-size:9px}
+tbody td{padding:10px 13px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap}
+tbody tr:hover{background:var(--bg2)}
+tbody tr:last-child td{border-bottom:none}
+.num{font-family:'Spline Sans Mono';text-align:right}
+.pos{color:var(--green)}.neg{color:var(--red)}
+.pill{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700;font-family:'Spline Sans Mono'}
+.pill.g1{background:rgba(91,157,255,.14);color:var(--blue)}
+.pill.g2{background:rgba(167,139,250,.14);color:var(--violet)}
+.pill.nc{background:rgba(255,93,93,.14);color:var(--red)}
+.tbl-foot{display:flex;align-items:center;justify-content:space-between;padding:13px 4px 2px;font-size:12px;color:var(--mut);font-weight:600;flex-wrap:wrap;gap:10px}
+.pager{display:flex;gap:6px;align-items:center}
+.pager button{background:var(--bg2);border:1px solid var(--line2);color:var(--txt);width:30px;height:30px;border-radius:7px;cursor:pointer;font-weight:700;transition:.15s}
+.pager button:hover:not(:disabled){border-color:var(--amber);color:var(--amber)}
+.pager button:disabled{opacity:.35;cursor:default}
+
+.rank{display:flex;align-items:center;gap:10px}
+.rk{width:22px;height:22px;border-radius:6px;background:var(--bg2);display:grid;place-items:center;font-family:'Spline Sans Mono';font-size:11px;font-weight:700;color:var(--mut);flex:none}
+.rk.top{background:var(--amber);color:#1a1205}
+
+footer{margin-top:40px;padding-top:22px;border-top:1px solid var(--line);color:var(--mut2);font-size:12px;text-align:center;font-weight:500}
+footer b{color:var(--mut)}
+.empty{text-align:center;padding:60px 20px;color:var(--mut2);font-weight:600}
+
+@media(max-width:980px){.g2,.g2b{grid-template-columns:1fr}}
+@media(max-width:560px){.kpi .kval{font-size:23px}.wrap{padding:0 14px 60px}.hd{padding:12px 14px}}
+.fade{animation:fade .4s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="hd">
+    <div class="brand">
+      <div class="logo">CTP</div>
+      <div>
+        <h1>Panel de Ventas · Repuestos CTP</h1>
+        <div class="sub">Analítica comercial SAP — Maquinaria pesada · Ucayali, Perú</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="live"><span class="dot"></span>DATOS CARGADOS</div>
+    <div class="period">Periodo <b id="periodLbl">02 — 25 May 2026</b></div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- FILTERS -->
+  <div class="filters fade">
+    <div class="filters-top">
+      <div class="ttl">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Filtros
+      </div>
+      <button class="btn-reset" id="resetBtn">↺ Limpiar todo</button>
+    </div>
+    <div class="fgrid">
+      <div class="field"><label>Buscar cliente</label><input id="fCli" placeholder="Nombre del cliente…" autocomplete="off"></div>
+      <div class="field"><label>Vendedor</label><select id="fVen"></select></div>
+      <div class="field"><label>Línea / Familia</label><select id="fLf"></select></div>
+      <div class="field"><label>Grupo de cliente</label><select id="fGrp"></select></div>
+      <div class="field"><label>Tipo documento</label><select id="fDoc"></select></div>
+      <div class="field"><label>Desde</label><input id="fD1" type="date"></div>
+      <div class="field"><label>Hasta</label><input id="fD2" type="date"></div>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpis" id="kpis"></div>
+
+  <!-- TENDENCIA + MIX -->
+  <div class="section-ttl">Evolución y composición</div>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Tendencia diaria
+        <span class="seg" id="trendSeg">
+          <button data-m="tv" class="on">Venta</button>
+          <button data-m="m">Margen</button>
+          <button data-m="tr">Trans.</button>
+        </span>
+      </h3>
+      <div class="desc">Evolución del indicador seleccionado por día de venta</div>
+      <div class="chart-box tall"><canvas id="cTrend"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Mix por grupo <span class="tag">Venta US$</span></h3>
+      <div class="desc">Local final vs. revendedor</div>
+      <div class="chart-box sm"><canvas id="cGroup"></canvas></div>
+    </div>
+  </div>
+
+  <!-- VENDEDORES + LINEAS -->
+  <div class="section-ttl">Rendimiento por dimensión</div>
+  <div class="grid g2b">
+    <div class="card">
+      <h3>Vendedores <span class="tag">Venta vs Margen</span></h3>
+      <div class="desc">Ranking por venta total con margen superpuesto</div>
+      <div class="chart-box tall"><canvas id="cVen"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Top líneas / familias <span class="tag">Top 12</span></h3>
+      <div class="desc">Familias de repuestos con mayor facturación</div>
+      <div class="chart-box tall"><canvas id="cLf"></canvas></div>
+    </div>
+  </div>
+
+  <!-- MARGEN SCATTER + DOW -->
+  <div class="grid g2b">
+    <div class="card">
+      <h3>Rentabilidad de familias <span class="tag">Venta × Margen %</span></h3>
+      <div class="desc">Burbuja = volumen de venta · eje Y = margen %. Cuadrante superior-derecho = ideal</div>
+      <div class="chart-box"><canvas id="cScatter"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Estacionalidad semanal <span class="tag">Día de semana</span></h3>
+      <div class="desc">Venta acumulada por día de la semana</div>
+      <div class="chart-box"><canvas id="cDow"></canvas></div>
+    </div>
+  </div>
+
+  <!-- RANKINGS -->
+  <div class="section-ttl">Rankings</div>
+  <div class="grid g2b">
+    <div class="card">
+      <h3>Top 10 clientes</h3>
+      <div class="desc">Por venta total en el periodo filtrado</div>
+      <div class="tbl-wrap"><table id="tCli"></table></div>
+    </div>
+    <div class="card">
+      <h3>Top 10 SKU</h3>
+      <div class="desc">Productos más vendidos por facturación</div>
+      <div class="tbl-wrap"><table id="tSku"></table></div>
+    </div>
+  </div>
+
+  <!-- DETALLE -->
+  <div class="section-ttl">Detalle de transacciones</div>
+  <div class="grid">
+    <div class="card">
+      <h3>Documentos <span class="tag" id="tblCount">—</span></h3>
+      <div class="desc">Click en encabezados para ordenar · usa los filtros para acotar</div>
+      <div class="tbl-wrap"><table id="tDet"></table></div>
+      <div class="tbl-foot">
+        <span id="tblInfo">—</span>
+        <div class="pager">
+          <button id="pgPrev">‹</button>
+          <span id="pgLbl" style="font-family:'Spline Sans Mono';min-width:80px;text-align:center">1 / 1</span>
+          <button id="pgNext">›</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <b>Repuestos CTP</b> · Panel analítico generado desde export SAP <code>Data_02_05_2026_al_25_05_2026</code> ·
+    4 693 líneas · Todo el procesamiento ocurre en tu navegador.
+  </footer>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
