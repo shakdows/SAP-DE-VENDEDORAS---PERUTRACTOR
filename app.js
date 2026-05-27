@@ -1,5 +1,5 @@
 /* ===== Panel de Ventas SAP — Repuestos CTP ===== */
-const DATA = window.SAP_DATA || [];
+let DATA = window.SAP_DATA || [];
 const $ = s => document.querySelector(s);
 const C = { amber:'#f59e0b', amber2:'#fb923c', amberD:'#b45309', teal:'#0ea5a4', blue:'#3b6ef5',
             red:'#f43f5e', green:'#10b981', greenD:'#047857', violet:'#7c5cfc',
@@ -34,7 +34,7 @@ function fillSel(id, items, all){
   const el = $(id);
   el.innerHTML = `<option value="">${all}</option>` + items.map(v=>`<option value="${v}">${v}</option>`).join('');
 }
-(function initFilters(){
+function buildSelectors(){
   // vendedor: name with key
   const vens = [...new Map(DATA.map(r=>[r.v, r.k])).entries()].sort((a,b)=>a[0].localeCompare(b[0]));
   $('#fVen').innerHTML = `<option value="">Todos los vendedores</option>` +
@@ -45,7 +45,10 @@ function fillSel(id, items, all){
   const fechas = DATA.map(r=>r.f).sort();
   const min=fechas[0], max=fechas[fechas.length-1];
   ['#fD1','#fD2'].forEach(id=>{ $(id).min=min; $(id).max=max; });
-})();
+  // etiqueta de periodo en header
+  if(min&&max){ const fmt=d=>d.slice(8)+' '+['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][+d.slice(5,7)-1];
+    $('#periodLbl').textContent = `${fmt(min)} — ${fmt(max)} ${max.slice(0,4)}`; }
+}
 
 /* ===== FILTER ENGINE ===== */
 function applyFilters(){
@@ -568,19 +571,101 @@ document.querySelectorAll('.info-btn').forEach(b=>b.onclick=()=>{
   if(box) box.classList.toggle('show');
 });
 
-// Comparador: init rangos por defecto (primera vs segunda mitad del periodo)
-(function initCompare(){
+// Comparador: fija rangos por defecto (primera vs segunda mitad). Reutilizable al recargar datos.
+function buildCompare(){
   const fechas=[...new Set(DATA.map(r=>r.f))].sort();
+  if(!fechas.length) return;
   const min=fechas[0], max=fechas[fechas.length-1];
   const mid=fechas[Math.floor(fechas.length/2)];
   const midNext=fechas[Math.floor(fechas.length/2)+1]||mid;
   ST.aD1=min; ST.aD2=mid; ST.bD1=midNext; ST.bD2=max;
   const set=(id,v)=>{const e=$(id); e.min=min; e.max=max; e.value=v;};
   set('#aD1',min); set('#aD2',mid); set('#bD1',midNext); set('#bD2',max);
-  [['#aD1','aD1'],['#aD2','aD2'],['#bD1','bD1'],['#bD2','bD2']].forEach(([id,key])=>{
-    $(id).addEventListener('change',e=>{ST[key]=e.target.value; renderCompare();});
+}
+// listeners del comparador (una sola vez)
+[['#aD1','aD1'],['#aD2','aD2'],['#bD1','bD1'],['#bD2','bD2']].forEach(([id,key])=>{
+  $(id).addEventListener('change',e=>{ST[key]=e.target.value; renderCompare();});
+});
+
+/* ===== FUENTE DE DATOS EN VIVO (Google Sheets) ===== */
+const SHEET_ID = '1scUhyHY0BxcC4kQyhZScSMq0vPcWFy1iSTW_vJ-BkWI';
+const SHEET_TAB = 'Data';
+const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_TAB)}`;
+
+function parseGvizDate(v){
+  if(v==null) return null;
+  if(typeof v==='string'){
+    let m=v.match(/^Date\((\d+),(\d+),(\d+)/);                 // Date(2026,4,21)
+    if(m) return `${m[1]}-${String(+m[2]+1).padStart(2,'0')}-${String(+m[3]).padStart(2,'0')}`;
+    m=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);              // 21/5/2026
+    if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+    m=v.match(/^(\d{4})-(\d{2})-(\d{2})/);                     // 2026-05-21
+    if(m) return v.slice(0,10);
+  }
+  return null;
+}
+const numv = v => { if(v==null||v==='') return 0; if(typeof v==='number') return v;
+  const n=parseFloat(String(v).replace(/,/g,'')); return isNaN(n)?0:n; };
+
+function transformSheet(json){
+  const cols = json.table.cols.map(c=>(c.label||'').trim());
+  const idx = name => cols.findIndex(c=>c.toLowerCase().startsWith(name.toLowerCase()));
+  const iV=idx('Nombre Vendedor'), iK=idx('Key Vendedor'), iDoc=idx('Documento'), iND=idx('N° Documento')>=0?idx('N° Documento'):idx('N'),
+        iCl=idx('Nombre de cliente'), iG=idx('Grupo'), iF=idx('Fecha'), iSku=idx('SKU'), iD=idx('Descripción'),
+        iLf=idx('Linea'), iQ=idx('Cantidad'), iTv=idx('Total Venta'), iTc=idx('Total Costo'), iM=idx('Margen Total');
+  if(iV<0||iTv<0||iF<0) throw new Error('Encabezados no reconocidos');
+  const recs=[];
+  json.table.rows.forEach(row=>{
+    const c=row.c||[]; const g=(i)=> i>=0&&c[i]?c[i].v:null;
+    const f=parseGvizDate(g(iF)); const ven=g(iV);
+    if(!f||!ven) return;
+    const docRaw=(g(iDoc)||'')+'';
+    const grpRaw=(g(iG)||'')+'';
+    recs.push({
+      v:ven, k:(g(iK)||'')+'', doc:docRaw.toLowerCase().includes('cr')||docRaw.toLowerCase().includes('nota')?'NC':'FB',
+      nd:(g(iND)||'')+'', cl:(g(iCl)||'')+'', g:grpRaw.trim().startsWith('1')?1:2, f:f,
+      sku:(g(iSku)||'')+'', d:(g(iD)||'')+'', lf:(g(iLf)||'SIN LÍNEA')+'',
+      q:Math.round(numv(g(iQ))), tv:+numv(g(iTv)).toFixed(2), tc:+numv(g(iTc)).toFixed(2), m:+numv(g(iM)).toFixed(2)
+    });
   });
-})();
+  return recs;
+}
+
+function setStatus(state, msg){
+  const el=$('#liveStatus'); if(!el) return;
+  el.className='live '+state;        // ok | local | loading | err
+  el.querySelector('.lt').textContent=msg;
+  const rb=$('#refreshBtn'); if(rb) rb.classList.toggle('spin', state==='loading');
+}
+
+async function loadLive(manual){
+  setStatus('loading','Actualizando…');
+  try{
+    const res = await fetch(GVIZ_URL, {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const txt = await res.text();
+    const m = txt.match(/setResponse\(([\s\S]*)\)\s*;?\s*$/);
+    if(!m) throw new Error('Respuesta inesperada');
+    const json = JSON.parse(m[1]);
+    const recs = transformSheet(json);
+    if(!recs.length) throw new Error('Sin filas válidas');
+    DATA = recs;
+    buildSelectors(); buildCompare();
+    Object.assign(ST,{cli:'',ven:'',lf:'',grp:'',doc:'',d1:'',d2:'',page:1});
+    ['#fCli','#fVen','#fLf','#fGrp','#fDoc','#fD1','#fD2'].forEach(id=>{if($(id))$(id).value='';});
+    render();
+    const now=new Date().toLocaleString('es-PE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    setStatus('ok',`En vivo · ${fNum(recs.length)} reg · ${now}`);
+  }catch(e){
+    console.warn('Carga en vivo falló:', e.message);
+    setStatus('local','Datos locales (Sheet no accesible)');
+    if(manual) alert('No se pudo leer el Google Sheet en vivo.\n\nVerifica que esté compartido como "Cualquiera con el enlace: Lector".\n\nDetalle: '+e.message);
+  }
+}
 
 /* ===== GO ===== */
-render();
+buildSelectors();
+buildCompare();
+render();          // pinta al instante con datos locales (data.js)
+loadLive(false);   // intenta refrescar desde Google Sheets
+$('#refreshBtn') && ($('#refreshBtn').onclick=()=>loadLive(true));
