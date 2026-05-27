@@ -13,6 +13,7 @@ const fUSD2 = n => '$'+(n||0).toLocaleString('en-US',{minimumFractionDigits:2,ma
 const fNum = n => (n||0).toLocaleString('es-PE');
 const fPct = n => (n||0).toFixed(1)+'%';
 const short = (s,n=34) => s.length>n ? s.slice(0,n-1)+'…' : s;
+const fAx = v => Math.abs(v)>=1000 ? '$'+(v/1000).toFixed(Math.abs(v)%1000?1:0)+'k' : '$'+Math.round(v);
 
 Chart.defaults.color = C.mut;
 Chart.defaults.font.family = "'Manrope',sans-serif";
@@ -27,6 +28,8 @@ Chart.defaults.plugins.tooltip.bodyFont = {weight:'600',size:12};
 const ST = { cli:'', ven:'', lf:'', grp:'', doc:'', d1:'', d2:'', trend:'tv', gran:'d',
              sort:{col:'f', dir:-1}, page:1, per:14 };
 let charts = {};
+let INS_ROWS = [];
+let modalChart = null;
 
 /* ===== INIT SELECTS ===== */
 function uniq(key){ return [...new Set(DATA.map(r=>r[key]))].sort((a,b)=>(''+a).localeCompare(''+b)); }
@@ -405,6 +408,7 @@ const ICO = {
 function renderInsights(rows){
   const grid = $('#insGrid');
   if(!rows.length){ grid.innerHTML='<div class="empty" style="grid-column:1/-1">Sin datos para los filtros seleccionados</div>'; return; }
+  INS_ROWS = rows;
   const out=[];
   const venta=sum(rows,'tv'), margen=sum(rows,'m');
   const mPct = venta?margen/venta*100:0;
@@ -413,7 +417,7 @@ function renderInsights(rows){
   const vAgg=Object.entries(groupAgg(rows,'v')).map(([k,v])=>({k,...v})).sort((a,b)=>b.venta-a.venta);
   if(vAgg.length>1){
     const top=vAgg[0], share=top.venta/venta*100;
-    out.push({t:share>=33?'warn':'info',ic:share>=33?'warn':'users',
+    out.push({t:share>=33?'warn':'info',ic:share>=33?'warn':'users',type:'ven',
       h:`<b>${top.k.split(' ').slice(0,2).join(' ')}</b> concentra el <span class="big">${share.toFixed(0)}%</span> de la venta`,
       d: share>=33?'Dependencia alta de un solo vendedor: conviene diversificar la cartera.':'Reparto razonable entre el equipo.'});
   }
@@ -421,18 +425,18 @@ function renderInsights(rows){
   const cAgg=Object.entries(groupAgg(rows,'cl')).map(([k,v])=>({k,...v})).sort((a,b)=>b.venta-a.venta);
   let acc=0, n80=0; for(const c of cAgg){ acc+=c.venta; n80++; if(acc>=venta*0.8) break; }
   const pctCli = (n80/cAgg.length*100);
-  out.push({t:'info',ic:'pct',
+  out.push({t:'info',ic:'pct',type:'pareto',
     h:`El <span class="big">80%</span> de la venta viene de <b>${n80} clientes</b>`,
     d:`Solo el ${pctCli.toFixed(0)}% de los ${fNum(cAgg.length)} clientes activos. Principio de Pareto en acción — prioriza su fidelización.`});
   // 3) Cliente top
-  out.push({t:'star',ic:'star',
+  out.push({t:'star',ic:'star',type:'cli',param:cAgg[0].k,
     h:`Cliente #1: <b>${cAgg[0].k.length>26?cAgg[0].k.slice(0,25)+'…':cAgg[0].k}</b>`,
     d:`<span class="big">${fUSD(cAgg[0].venta)}</span> · ${(cAgg[0].venta/venta*100).toFixed(1)}% del total · margen ${fPct(cAgg[0].venta?cAgg[0].margen/cAgg[0].venta*100:0)}.`});
   // 4) Clientes a pérdida / margen negativo
   const loss=cAgg.filter(c=>c.margen<0);
   if(loss.length){
     const lossSum=loss.reduce((a,c)=>a+c.margen,0);
-    out.push({t:'alert',ic:'alert',
+    out.push({t:'alert',ic:'alert',type:'loss',
       h:`<b>${loss.length} cliente${loss.length>1?'s':''}</b> con margen negativo`,
       d:`Ventas que dejaron pérdida (<span class="big">${fUSD2(lossSum)}</span> en conjunto). Revisa precios o devoluciones de: ${loss.slice(0,2).map(c=>c.k.split(' ')[0]).join(', ')}${loss.length>2?'…':''}.`});
   }
@@ -441,11 +445,11 @@ function renderInsights(rows){
   if(lAgg.length>2){
     const best=[...lAgg].sort((a,b)=>b.mp-a.mp)[0];
     const worst=[...lAgg].sort((a,b)=>a.mp-b.mp)[0];
-    out.push({t:'good',ic:'up',
+    out.push({t:'good',ic:'up',type:'fam',param:best.k,
       h:`<b>${best.k}</b> es la familia más rentable: <span class="big">${best.mp.toFixed(0)}%</span>`,
       d:`Frente a un promedio de ${mPct.toFixed(0)}%. Empujar su venta mejora el margen global.`});
     if(worst.k!==best.k && worst.mp < mPct*0.7){
-      out.push({t:'warn',ic:'pkg',
+      out.push({t:'warn',ic:'pkg',type:'fam',param:worst.k,
         h:`<b>${worst.k}</b> vende bien pero su margen es bajo: <span class="big">${worst.mp.toFixed(0)}%</span>`,
         d:`Mucho volumen (${fUSD(worst.venta)}) con poca rentabilidad. Oportunidad para renegociar costo o precio.`});
     }
@@ -455,24 +459,178 @@ function renderInsights(rows){
   const dArr=Object.entries(dAgg).sort((a,b)=>b[1]-a[1]);
   if(dArr.length>1){
     const bd=dArr[0]; const dt=new Date(bd[0]+'T00:00:00');
-    out.push({t:'info',ic:'cal',
+    out.push({t:'info',ic:'cal',type:'day',param:bd[0],
       h:`Mejor día: <b>${DOW[dt.getDay()]} ${bd[0].slice(8)}/${bd[0].slice(5,7)}</b>`,
       d:`<span class="big">${fUSD(bd[1])}</span> en ventas — ${(bd[1]/venta*100).toFixed(0)}% de todo el periodo en un solo día.`});
   }
   // 7) Notas de crédito
   const nc=rows.filter(r=>r.doc==='NC');
   if(nc.length){
-    out.push({t:'warn',ic:'alert',
+    out.push({t:'warn',ic:'alert',type:'nc',
       h:`<b>${nc.length}</b> nota${nc.length>1?'s':''} de crédito en el periodo`,
       d:`Impacto de <span class="big">${fUSD2(sum(nc,'tv'))}</span> (devoluciones/ajustes), ya descontado de los totales.`});
   }
 
   grid.innerHTML = out.map(o=>`
-    <div class="ins ${o.t}">
+    <div class="ins ${o.t} clickable" data-type="${o.type||''}" data-param="${(o.param||'').replace(/"/g,'&quot;')}">
       <div class="ic"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">${ICO[o.ic]}</svg></div>
-      <div class="itxt">${o.h}<br><span style="color:var(--ink3);font-size:12px">${o.d}</span></div>
+      <div class="itxt">${o.h}<br><span style="color:var(--ink3);font-size:12px">${o.d}</span><span class="ins-more">Ver detalle →</span></div>
     </div>`).join('');
+  grid.querySelectorAll('.ins.clickable').forEach(c=>c.onclick=()=>openInsight(c.dataset.type, c.dataset.param));
 }
+
+/* ===== DETALLE EN VENTANA FLOTANTE ===== */
+function miniTable(headers, rows){
+  return `<div class="tbl-wrap"><table><thead><tr>${headers.map((h,i)=>`<th class="${i>0?'num':''}">${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td class="${i>0?'num':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+function statRow(items){ // items: [{l,v,c}]
+  return `<div class="mstats">${items.map(s=>`<div class="mstat"><div class="ml">${s.l}</div><div class="mv" style="color:${s.c||'var(--ink)'}">${s.v}</div></div>`).join('')}</div>`;
+}
+function pctOf(part,total){ return total? (part/total*100):0; }
+
+const DETAIL = {
+  ven(rows){
+    const venta=sum(rows,'tv');
+    const arr=Object.entries(groupAgg(rows,'v')).map(([k,v])=>({k,...v})).sort((a,b)=>b.venta-a.venta);
+    const body=arr.map((x,i)=>[
+      `<div class="rank"><span class="rk ${i<3?'top':''}">${i+1}</span>${x.k.split(' ').slice(0,2).join(' ')}</div>`,
+      fUSD2(x.venta), pctOf(x.venta,venta).toFixed(1)+'%', fNum(x.trans),
+      fUSD2(x.margen), `<span class="${x.margen>=0?'pos':'neg'}">${fPct(pctOf(x.margen,x.venta))}</span>`
+    ]);
+    return {title:'Detalle por vendedor',
+      html: statRow([{l:'Vendedores',v:arr.length},{l:'Venta total',v:fUSD(venta),c:'var(--amber-d)'},{l:'Concentración top‑1',v:pctOf(arr[0].venta,venta).toFixed(0)+'%',c:'var(--rose)'}])
+        + '<div class="mchart"><canvas id="mCanvas"></canvas></div>'
+        + miniTable(['Vendedor','Venta','% del total','Transac.','Margen','Margen %'], body),
+      chart(){ const top=arr.slice(0,11);
+        modalChart=new Chart($('#mCanvas'),{type:'bar',data:{labels:top.map(x=>x.k.split(' ')[0]),
+          datasets:[{label:'Venta',data:top.map(x=>x.venta),backgroundColor:C.amber,borderRadius:5},
+                    {label:'Margen',data:top.map(x=>x.margen),backgroundColor:C.green,borderRadius:5}]},
+          options:{maintainAspectRatio:false,plugins:{legend:{position:'top',align:'end',labels:{usePointStyle:true,boxWidth:9,padding:10}}},
+            scales:{x:{grid:{display:false}},y:{grid:{color:C.line},ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}}}}}); }};
+  },
+  pareto(rows){
+    const venta=sum(rows,'tv');
+    const arr=Object.entries(groupAgg(rows,'cl')).map(([k,v])=>({k,...v})).sort((a,b)=>b.venta-a.venta);
+    let acc=0; const withCum=arr.map(x=>{acc+=x.venta; return {...x,cum:acc,cumPct:pctOf(acc,venta)};});
+    const n80=withCum.findIndex(x=>x.cumPct>=80)+1;
+    const body=withCum.slice(0,40).map((x,i)=>[
+      `<div class="rank"><span class="rk ${x.cumPct<=80?'top':''}">${i+1}</span>${x.k.length>34?x.k.slice(0,33)+'…':x.k}</div>`,
+      fUSD2(x.venta), pctOf(x.venta,venta).toFixed(1)+'%', `<b>${x.cumPct.toFixed(1)}%</b>`,
+      `<span class="${x.margen>=0?'pos':'neg'}">${fPct(pctOf(x.margen,x.venta))}</span>`
+    ]);
+    return {title:'Pareto de clientes (80/20)',
+      html: statRow([{l:'Clientes activos',v:fNum(arr.length)},{l:'Generan el 80%',v:n80+' clientes',c:'var(--blue)'},{l:'= del total',v:pctOf(n80,arr.length).toFixed(0)+'%',c:'var(--violet)'}])
+        + '<div class="mchart"><canvas id="mCanvas"></canvas></div>'
+        + `<p class="mnote">Tabla: top 40 clientes. La columna <b>% acumulado</b> muestra cuánto suman entre todos hasta ese punto; los resaltados forman el 80% de la venta.</p>`
+        + miniTable(['Cliente','Venta','% indiv.','% acum.','Margen %'], body),
+      chart(){ const top=withCum.slice(0,15);
+        modalChart=new Chart($('#mCanvas'),{type:'bar',data:{labels:top.map((x,i)=>'#'+(i+1)),
+          datasets:[{type:'line',label:'% acumulado',data:top.map(x=>x.cumPct),borderColor:C.violet,borderWidth:2.5,tension:.3,yAxisID:'y1',pointRadius:2.5},
+                    {label:'Venta',data:top.map(x=>x.venta),backgroundColor:C.blue,borderRadius:5,yAxisID:'y'}]},
+          options:{maintainAspectRatio:false,plugins:{legend:{position:'top',align:'end',labels:{usePointStyle:true,boxWidth:9,padding:10}},
+            tooltip:{callbacks:{title:items=>top[items[0].dataIndex].k}}},
+            scales:{x:{grid:{display:false}},y:{grid:{color:C.line},ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}},
+              y1:{position:'right',grid:{display:false},min:0,max:100,ticks:{callback:v=>v+'%',color:C.violet}}}}}); }};
+  },
+  cli(rows,name){
+    const sub=rows.filter(r=>r.cl===name);
+    const venta=sum(sub,'tv'),margen=sum(sub,'m');
+    const byLf=Object.entries(groupAgg(sub,'lf')).map(([k,v])=>({k,...v})).sort((a,b)=>b.venta-a.venta);
+    const docs=new Set(sub.map(r=>r.nd)).size;
+    const tx=sub.slice().sort((a,b)=>b.tv-a.tv).slice(0,25).map(r=>[
+      `${r.f.slice(8)}/${r.f.slice(5,7)}`, r.lf, `${r.sku} ${short(r.d,16)}`, fNum(r.q),
+      fUSD2(r.tv), `<span class="${r.m>=0?'pos':'neg'}">${fUSD2(r.m)}</span>`]);
+    return {title:'Cliente · '+name,
+      html: statRow([{l:'Venta',v:fUSD(venta),c:'var(--amber-d)'},{l:'Margen',v:fUSD(margen),c:'var(--emerald-d)'},{l:'Margen %',v:fPct(pctOf(margen,venta))},{l:'Documentos',v:docs},{l:'Líneas vendidas',v:fNum(sub.length)}])
+        + '<div class="mchart"><canvas id="mCanvas"></canvas></div>'
+        + '<p class="mnote">Top transacciones de este cliente (máx. 25, por venta).</p>'
+        + miniTable(['Fecha','Línea','SKU','Cant','Venta','Margen'], tx),
+      chart(){ const top=byLf.slice(0,10).reverse();
+        modalChart=new Chart($('#mCanvas'),{type:'bar',data:{labels:top.map(x=>x.k),datasets:[{data:top.map(x=>x.venta),backgroundColor:C.amber,borderRadius:5}]},
+          options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'Venta por familia',color:C.mut,font:{size:12,weight:'600'}}},
+            scales:{x:{grid:{color:C.line},ticks:{callback:fAx}},y:{grid:{display:false}}}}}); }};
+  },
+  fam(rows,name){
+    const sub=rows.filter(r=>r.lf===name);
+    const venta=sum(sub,'tv'),margen=sum(sub,'m');
+    const bySku={}; sub.forEach(r=>{const g=bySku[r.sku]||(bySku[r.sku]={d:r.d,venta:0,cant:0,m:0});g.venta+=r.tv;g.cant+=r.q;g.m+=r.m;});
+    const skus=Object.entries(bySku).map(([k,v])=>({k,...v})).sort((a,b)=>b.venta-a.venta);
+    const topCli=Object.entries(groupAgg(sub,'cl')).map(([k,v])=>({k,...v})).sort((a,b)=>b.venta-a.venta).slice(0,8);
+    const body=skus.slice(0,25).map((x,i)=>[
+      `<div class="rank"><span class="rk ${i<3?'top':''}">${i+1}</span><span><b style="font-family:'Spline Sans Mono';font-size:11px;color:var(--ink2)">${x.k}</b> ${short(x.d,18)}</span></div>`,
+      fUSD2(x.venta), fNum(x.cant), `<span class="${x.m>=0?'pos':'neg'}">${fPct(pctOf(x.m,x.venta))}</span>`]);
+    return {title:'Familia · '+name,
+      html: statRow([{l:'Venta',v:fUSD(venta),c:'var(--amber-d)'},{l:'Margen',v:fUSD(margen),c:'var(--emerald-d)'},{l:'Margen %',v:fPct(pctOf(margen,venta))},{l:'SKUs distintos',v:skus.length},{l:'Unidades',v:fNum(sum(sub,'q'))}])
+        + '<div class="mchart"><canvas id="mCanvas"></canvas></div>'
+        + '<p class="mnote">SKUs de esta familia (máx. 25, por venta).</p>'
+        + miniTable(['SKU · Descripción','Venta','Unid.','Margen %'], body),
+      chart(){ const top=topCli.slice().reverse();
+        modalChart=new Chart($('#mCanvas'),{type:'bar',data:{labels:top.map(x=>short(x.k,22)),datasets:[{data:top.map(x=>x.venta),backgroundColor:C.blue,borderRadius:5}]},
+          options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'Top clientes de esta familia',color:C.mut,font:{size:12,weight:'600'}}},
+            scales:{x:{grid:{color:C.line},ticks:{callback:fAx}},y:{grid:{display:false}}}}}); }};
+  },
+  day(rows,date){
+    const sub=rows.filter(r=>r.f===date);
+    const venta=sum(sub,'tv'),margen=sum(sub,'m');
+    const byVen=Object.entries(groupAgg(sub,'v')).map(([k,v])=>({k,...v})).sort((a,b)=>b.venta-a.venta);
+    const byLf=Object.entries(groupAgg(sub,'lf')).map(([k,v])=>({k,...v})).sort((a,b)=>b.venta-a.venta).slice(0,12);
+    const dt=new Date(date+'T00:00:00');
+    const body=byVen.map((x,i)=>[`<div class="rank"><span class="rk ${i<3?'top':''}">${i+1}</span>${x.k.split(' ').slice(0,2).join(' ')}</div>`,
+      fUSD2(x.venta), fNum(x.trans), `<span class="${x.margen>=0?'pos':'neg'}">${fPct(pctOf(x.margen,x.venta))}</span>`]);
+    return {title:'Día · '+DOW[dt.getDay()]+' '+date,
+      html: statRow([{l:'Venta del día',v:fUSD(venta),c:'var(--amber-d)'},{l:'Margen',v:fUSD(margen),c:'var(--emerald-d)'},{l:'Margen %',v:fPct(pctOf(margen,venta))},{l:'Documentos',v:new Set(sub.map(r=>r.nd)).size},{l:'Líneas',v:fNum(sub.length)}])
+        + '<div class="mchart"><canvas id="mCanvas"></canvas></div>'
+        + miniTable(['Vendedor','Venta','Transac.','Margen %'], body),
+      chart(){ const top=byLf.slice().reverse();
+        modalChart=new Chart($('#mCanvas'),{type:'bar',data:{labels:top.map(x=>x.k),datasets:[{data:top.map(x=>x.venta),backgroundColor:C.amber,borderRadius:5}]},
+          options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'Venta por familia (ese día)',color:C.mut,font:{size:12,weight:'600'}}},
+            scales:{x:{grid:{color:C.line},ticks:{callback:fAx}},y:{grid:{display:false}}}}}); }};
+  },
+  loss(rows){
+    const arr=Object.entries(groupAgg(rows,'cl')).map(([k,v])=>({k,...v})).filter(x=>x.margen<0).sort((a,b)=>a.margen-b.margen);
+    const body=arr.map((x,i)=>[`<div class="rank"><span class="rk">${i+1}</span>${x.k.length>34?x.k.slice(0,33)+'…':x.k}</div>`,
+      fUSD2(x.venta), `<span class="neg">${fUSD2(x.margen)}</span>`, fNum(x.trans)]);
+    // detalle de transacciones a pérdida
+    const lossTx=rows.filter(r=>r.m<0).sort((a,b)=>a.m-b.m).slice(0,25).map(r=>[
+      `${r.f.slice(8)}/${r.f.slice(5,7)}`, short(r.cl,22), `${r.sku}`, r.doc==='NC'?'<span class="pill nc">NC</span>':'venta',
+      fUSD2(r.tv), `<span class="neg">${fUSD2(r.m)}</span>`]);
+    return {title:'Clientes con margen negativo',
+      html: statRow([{l:'Clientes a pérdida',v:arr.length,c:'var(--rose)'},{l:'Pérdida conjunta',v:fUSD2(arr.reduce((a,c)=>a+c.margen,0)),c:'var(--rose)'}])
+        + '<p class="mnote">Clientes cuyo margen total es negativo (resta a las utilidades).</p>'
+        + miniTable(['Cliente','Venta','Margen','Transac.'], body)
+        + '<p class="mnote" style="margin-top:16px">Líneas individuales que generaron pérdida (máx. 25):</p>'
+        + miniTable(['Fecha','Cliente','SKU','Tipo','Venta','Margen'], lossTx),
+      chart:null};
+  },
+  nc(rows){
+    const arr=rows.filter(r=>r.doc==='NC').sort((a,b)=>a.f.localeCompare(b.f));
+    const body=arr.map(r=>[`${r.f.slice(8)}/${r.f.slice(5,7)}`, r.nd, short(r.cl,24), `${r.sku} ${short(r.d,14)}`,
+      `<span class="neg">${fUSD2(r.tv)}</span>`, `<span class="neg">${fUSD2(r.m)}</span>`]);
+    return {title:'Notas de crédito',
+      html: statRow([{l:'Notas de crédito',v:arr.length,c:'var(--rose)'},{l:'Monto total',v:fUSD2(sum(arr,'tv')),c:'var(--rose)'},{l:'Margen',v:fUSD2(sum(arr,'m'))}])
+        + '<p class="mnote">Devoluciones/ajustes del periodo (ya descontados de los totales del panel).</p>'
+        + miniTable(['Fecha','Documento','Cliente','SKU','Venta','Margen'], body),
+      chart:null};
+  }
+};
+
+function openInsight(type, param){
+  if(!type || !DETAIL[type]) return;
+  if(modalChart){ modalChart.destroy(); modalChart=null; }
+  const det = DETAIL[type](INS_ROWS, param);
+  $('#mTitle').textContent = det.title;
+  $('#mBody').innerHTML = det.html;
+  $('#modal').classList.add('open');
+  document.body.style.overflow='hidden';
+  if(det.chart) requestAnimationFrame(()=>det.chart());
+}
+function closeModal(){
+  $('#modal').classList.remove('open');
+  document.body.style.overflow='';
+  if(modalChart){ modalChart.destroy(); modalChart=null; }
+}
+
 
 /* ===== COMPARADOR DE PERIODOS ===== */
 function periodStats(rows,d1,d2){
@@ -564,6 +722,11 @@ $('#pgNext').onclick=()=>{ST.page++;renderDetail(applyFilters());};
 
 // Exportar CSV
 $('#exportBtn').onclick=exportCSV;
+
+// Cierre del modal de detalle
+$('#mClose').onclick=closeModal;
+$('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
 
 // Info toggles ("¿cómo leer?")
 document.querySelectorAll('.info-btn').forEach(b=>b.onclick=()=>{
