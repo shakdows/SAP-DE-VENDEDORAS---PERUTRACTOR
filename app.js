@@ -878,16 +878,17 @@ function bindToggles(togglesId, canvasId){
 }
 
 function renderVenGain(rows){
-  // vendedores ordenados POR MARGEN (no por venta): barras margen + linea margen %
+  // vendedores ordenados POR MARGEN: barras venta + margen + linea margen %
   const arr=Object.entries(groupAgg(rows,'v')).map(([k,v])=>({k,...v,mp:v.venta?v.margen/v.venta*100:0})).sort((a,b)=>b.margen-a.margen);
   const lbls=arr.map(x=>x.k.split(' ')[0]+' '+(x.k.split(' ')[1]||'').slice(0,1)+'.');
   mk('#cVenGain',{data:{labels:lbls,datasets:[
-    {type:'bar',label:'Ganancia US$',data:arr.map(x=>+x.margen.toFixed(2)),backgroundColor:ctx=>{const c=ctx.chart.ctx.createLinearGradient(0,0,0,340);c.addColorStop(0,C.green);c.addColorStop(1,'#0e9170');return c;},borderRadius:6,maxBarThickness:36,order:2},
+    {type:'bar',label:'Venta',data:arr.map(x=>+x.venta.toFixed(2)),backgroundColor:C.amber+'cc',borderRadius:6,maxBarThickness:30,order:3},
+    {type:'bar',label:'Ganancia US$',data:arr.map(x=>+x.margen.toFixed(2)),backgroundColor:ctx=>{const c=ctx.chart.ctx.createLinearGradient(0,0,0,340);c.addColorStop(0,C.green);c.addColorStop(1,'#0e9170');return c;},borderRadius:6,maxBarThickness:30,order:2},
     {type:'line',label:'Margen %',data:arr.map(x=>+x.mp.toFixed(1)),borderColor:C.violet,borderWidth:2.5,tension:.3,pointRadius:3.5,pointBackgroundColor:C.violet,pointBorderColor:'#fff',pointBorderWidth:1.5,order:1,yAxisID:'y1'}]},
     options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:false},
         tooltip:{callbacks:{label:c=>c.dataset.label==='Margen %'?` Margen %: ${c.parsed.y}%`:` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`,
-          afterBody:items=>{const i=items[0].dataIndex;return 'Venta: '+fUSD2(arr[i].venta)+' · Transac.: '+fNum(arr[i].trans);}}}},
+          afterBody:items=>{const i=items[0].dataIndex;return 'Transac.: '+fNum(arr[i].trans);}}}},
       scales:{x:{...noGrid,ticks:{font:{size:10}}},
         y:{...gridOpt,beginAtZero:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}},
         y1:{position:'right',grid:{display:false},border:{display:false},min:0,suggestedMax:60,ticks:{callback:v=>v+'%',color:C.violet,font:{weight:'600'}}}}}});
