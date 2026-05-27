@@ -183,7 +183,7 @@ function renderCumul(rows){
       backgroundColor:ctx=>{const c=ctx.chart.ctx.createLinearGradient(0,0,0,300);c.addColorStop(0,C.amber+'2e');c.addColorStop(1,C.amber+'03');return c;}},
     {label:'Margen acum.',data:cm,borderColor:C.green,borderWidth:2.5,tension:.3,fill:false,pointRadius:0,pointHoverRadius:5,borderDash:[5,4]}]},
     options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{position:'top',align:'end',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,padding:12}},
+      plugins:{legend:{display:false},
         tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`}}},
       scales:{x:{...noGrid,ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:10}},
         y:{...gridOpt,beginAtZero:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}}}}});
@@ -253,7 +253,7 @@ function renderVen(rows){
       borderColor:C.violet,borderWidth:2.5,tension:.35,pointRadius:3.5,pointBackgroundColor:C.violet,pointBorderColor:'#fff',pointBorderWidth:1.5,
       order:1,yAxisID:'y1'}]},
     options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{position:'top',align:'end',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,padding:12}},
+      plugins:{legend:{display:false},
       tooltip:{callbacks:{label:c=>c.dataset.label==='Margen %'?` Margen %: ${c.parsed.y}%`:` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`}}},
       scales:{x:{...noGrid,ticks:{font:{size:10}}},
         y:{...gridOpt,beginAtZero:true,position:'left',ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}},
@@ -747,19 +747,20 @@ function renderGain(rows){
   rows.forEach(r=>{const g=m[r.f]||(m[r.f]={tv:0,tc:0,m:0});g.tv+=r.tv;g.tc+=r.tc;g.m+=r.m;});
   const days=Object.keys(m).sort();
   const lbls=days.map(d=>d.slice(8)+'/'+d.slice(5,7));
+  const venta=days.map(d=>+m[d].tv.toFixed(2));
   const costo=days.map(d=>+m[d].tc.toFixed(2));
   const marg =days.map(d=>+m[d].m.toFixed(2));
   const pct  =days.map(d=>m[d].tv?+(m[d].m/m[d].tv*100).toFixed(1):0);
   mk('#cGain',{data:{labels:lbls,datasets:[
-    {type:'bar',label:'Costo',data:costo,backgroundColor:'rgba(244,63,94,.75)',borderRadius:5,stack:'s',order:3,maxBarThickness:30},
-    {type:'bar',label:'Ganancia (margen)',data:marg,backgroundColor:C.green,borderRadius:5,stack:'s',order:2,maxBarThickness:30},
+    {type:'bar',label:'Venta',data:venta,backgroundColor:C.amber+'cc',borderRadius:5,stack:'venta',order:4,maxBarThickness:14},
+    {type:'bar',label:'Costo',data:costo,backgroundColor:'rgba(244,63,94,.75)',borderRadius:5,stack:'descomp',order:3,maxBarThickness:30},
+    {type:'bar',label:'Ganancia',data:marg,backgroundColor:C.green,borderRadius:5,stack:'descomp',order:2,maxBarThickness:30},
     {type:'line',label:'Margen %',data:pct,borderColor:C.violet,borderWidth:2.5,tension:.3,pointRadius:2.5,pointBackgroundColor:C.violet,pointBorderColor:'#fff',pointBorderWidth:1.5,order:1,yAxisID:'y1'}]},
     options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{position:'top',align:'end',labels:{usePointStyle:true,boxWidth:9,padding:11}},
-        tooltip:{callbacks:{label:c=>c.dataset.label==='Margen %'?` Margen %: ${c.parsed.y}%`:` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`,
-          afterBody:items=>{const i=items[0].dataIndex;return 'Venta total: '+fUSD2(m[days[i]].tv);}}}},
-      scales:{x:{...noGrid,stacked:true,ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}},
-        y:{...gridOpt,stacked:true,beginAtZero:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'},title:{display:true,text:'US$',color:C.mut,font:{size:10}}},
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:c=>c.dataset.label==='Margen %'?` Margen %: ${c.parsed.y}%`:` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`}}},
+      scales:{x:{...noGrid,ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}},
+        y:{...gridOpt,beginAtZero:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'},title:{display:true,text:'US$',color:C.mut,font:{size:10}}},
         y1:{position:'right',grid:{display:false},border:{display:false},min:0,suggestedMax:60,ticks:{callback:v=>v+'%',color:C.violet,font:{weight:'600'}},title:{display:true,text:'Margen %',color:C.violet,font:{size:10}}}}}});
   applyToggles('gainToggles','#cGain');
 }
@@ -884,7 +885,7 @@ function renderVenGain(rows){
     {type:'bar',label:'Ganancia US$',data:arr.map(x=>+x.margen.toFixed(2)),backgroundColor:ctx=>{const c=ctx.chart.ctx.createLinearGradient(0,0,0,340);c.addColorStop(0,C.green);c.addColorStop(1,'#0e9170');return c;},borderRadius:6,maxBarThickness:36,order:2},
     {type:'line',label:'Margen %',data:arr.map(x=>+x.mp.toFixed(1)),borderColor:C.violet,borderWidth:2.5,tension:.3,pointRadius:3.5,pointBackgroundColor:C.violet,pointBorderColor:'#fff',pointBorderWidth:1.5,order:1,yAxisID:'y1'}]},
     options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{position:'top',align:'end',labels:{usePointStyle:true,boxWidth:9,padding:11}},
+      plugins:{legend:{display:false},
         tooltip:{callbacks:{label:c=>c.dataset.label==='Margen %'?` Margen %: ${c.parsed.y}%`:` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`,
           afterBody:items=>{const i=items[0].dataIndex;return 'Venta: '+fUSD2(arr[i].venta)+' · Transac.: '+fNum(arr[i].trans);}}}},
       scales:{x:{...noGrid,ticks:{font:{size:10}}},
@@ -931,7 +932,7 @@ function renderCompare(){
   mk('#cCmp',{type:'bar',data:{labels:top,datasets:[
     {label:'Periodo A',data:top.map(l=>sumBy(A.rows,l)),backgroundColor:C.amber,borderRadius:5,maxBarThickness:26},
     {label:'Periodo B',data:top.map(l=>sumBy(B.rows,l)),backgroundColor:C.blue,borderRadius:5,maxBarThickness:26}]},
-    options:{maintainAspectRatio:false,plugins:{legend:{position:'top',align:'end',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,padding:12}},
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false},
       title:{display:true,text:'Venta por familia: A vs B',color:C.mut,font:{size:12,weight:'600'},padding:{bottom:8}},
       tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`}}},
       scales:{x:{...noGrid,ticks:{font:{size:10}}},y:{...gridOpt,beginAtZero:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}}}}});
