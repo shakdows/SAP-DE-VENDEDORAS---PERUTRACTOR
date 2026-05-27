@@ -779,23 +779,84 @@ function renderGainMix(rows){
         title:{display:true,text:`Margen total: ${fUSD(margen)}  ·  ${venta?(margen/venta*100).toFixed(1):0}% sobre venta`,color:C.mut,font:{size:12,weight:'600'},padding:{bottom:8}}}}});
 }
 
+let SKU_GAIN_DATA = [];
 function renderSkuGain(rows){
   // top 20 SKUs por margen: barras venta + margen + linea margen %
   const m={};
-  rows.forEach(r=>{const g=m[r.sku]||(m[r.sku]={d:r.d,tv:0,m:0});g.tv+=r.tv;g.m+=r.m;});
-  const arr=Object.entries(m).map(([k,v])=>({k,...v,mp:v.tv?v.m/v.tv*100:0})).sort((a,b)=>b.m-a.m).slice(0,20);
+  rows.forEach(r=>{const g=m[r.sku]||(m[r.sku]={d:r.d,lf:r.lf,tv:0,m:0,q:0});g.tv+=r.tv;g.m+=r.m;g.q+=r.q;});
+  const all=Object.entries(m).map(([k,v])=>({k,...v,mp:v.tv?v.m/v.tv*100:0}));
+  SKU_GAIN_DATA = all;
+  const arr=all.slice().sort((a,b)=>b.m-a.m).slice(0,20);
   const lbls=arr.map(x=>x.k.length>10?x.k.slice(0,9)+'…':x.k);
   mk('#cSkuGain',{data:{labels:lbls,datasets:[
     {type:'bar',label:'Venta',data:arr.map(x=>+x.tv.toFixed(2)),backgroundColor:C.amber+'cc',borderRadius:4,order:3,maxBarThickness:22},
     {type:'bar',label:'Ganancia',data:arr.map(x=>+x.m.toFixed(2)),backgroundColor:C.green,borderRadius:4,order:2,maxBarThickness:22},
     {type:'line',label:'Margen %',data:arr.map(x=>+x.mp.toFixed(1)),borderColor:C.violet,borderWidth:2.5,tension:.3,pointRadius:3,pointBackgroundColor:C.violet,pointBorderColor:'#fff',pointBorderWidth:1.5,order:1,yAxisID:'y1'}]},
     options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{position:'top',align:'end',labels:{usePointStyle:true,boxWidth:9,padding:11}},
+      plugins:{legend:{display:false},
         tooltip:{callbacks:{title:items=>{const i=items[0].dataIndex;return arr[i].k+' · '+short(arr[i].d,24);},
           label:c=>c.dataset.label==='Margen %'?` Margen %: ${c.parsed.y}%`:` ${c.dataset.label}: ${fUSD2(c.parsed.y)}`}}},
       scales:{x:{...noGrid,ticks:{font:{size:10}}},
         y:{...gridOpt,beginAtZero:true,position:'left',ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}},
         y1:{position:'right',grid:{display:false},border:{display:false},min:0,suggestedMax:100,ticks:{callback:v=>v+'%',color:C.violet,font:{weight:'600'}}}}}});
+  // aplicar estado actual de toggles
+  applySkuToggles();
+  renderSkuList();
+}
+
+let SKU_LIST_SORT = 'm';
+function renderSkuList(){
+  const wrap=$('#skuList'); if(!wrap) return;
+  if(!SKU_GAIN_DATA.length){ wrap.innerHTML='<div class="empty">Sin datos para los filtros</div>'; return; }
+  const sortKey = SKU_LIST_SORT==='tv'?'tv':SKU_LIST_SORT==='mp'?'mp':'m';
+  // para "por margen %", solo SKUs con venta significativa (≥0.3% del total filtrado)
+  const totalV = SKU_GAIN_DATA.reduce((a,x)=>a+x.tv,0);
+  const minMargin = sortKey==='mp' ? Math.max(300, totalV*0.003) : 0;
+  const list = SKU_GAIN_DATA.filter(x=>x.tv>=minMargin).slice().sort((a,b)=>b[sortKey]-a[sortKey]).slice(0,50);
+  const maxTv = Math.max(...list.map(x=>x.tv));
+  const maxM  = Math.max(...list.map(x=>x.m));
+  const maxMp = 100;
+  wrap.innerHTML = list.map((x,i)=>{
+    const topCls = i===0?'top1':i===1?'top2':i===2?'top3':'';
+    const wTv = maxTv ? Math.max(2, x.tv/maxTv*100) : 0;
+    const wM  = maxM>0 ? Math.max(2, Math.max(0,x.m)/maxM*100) : 0;
+    const wMp = Math.max(2, Math.min(100, x.mp));
+    return `<div class="sku-row ${topCls}" data-sku="${x.k}">
+      <div class="rk2">${i+1}</div>
+      <div class="nm"><div class="sku">${x.k} · ${x.lf}</div><div class="desc">${x.d}</div></div>
+      <div class="sku-metric amber">
+        <div class="label"><span class="ld"></span>Venta</div>
+        <div class="val">${fUSD2(x.tv)}</div>
+        <div class="bar"><div class="fill" style="width:${wTv}%"></div></div>
+      </div>
+      <div class="sku-metric green">
+        <div class="label"><span class="ld"></span>Ganancia</div>
+        <div class="val">${fUSD2(x.m)}</div>
+        <div class="bar"><div class="fill" style="width:${wM}%"></div></div>
+      </div>
+      <div class="sku-metric violet">
+        <div class="label"><span class="ld"></span>Margen %</div>
+        <div class="val">${x.mp.toFixed(1)}%</div>
+        <div class="bar"><div class="fill" style="width:${wMp}%"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+  // click en una fila => abrir modal del SKU como parte de su familia (reusa DETAIL.fam mostrando ese SKU primero)
+  wrap.querySelectorAll('.sku-row').forEach(r=>r.onclick=()=>{
+    const sku=r.dataset.sku;
+    const rec=SKU_GAIN_DATA.find(x=>x.k===sku);
+    if(rec) openInsight('fam', rec.lf);
+  });
+}
+
+function applySkuToggles(){
+  const ch = charts['#cSkuGain']; if(!ch) return;
+  document.querySelectorAll('#skuToggles .series-tog').forEach(t=>{
+    const i = parseInt(t.dataset.s,10);
+    const visible = t.classList.contains('on');
+    ch.setDatasetVisibility(i, visible);
+  });
+  ch.update();
 }
 
 function renderVenGain(rows){
@@ -913,6 +974,17 @@ $('#exportBtn').onclick=exportCSV;
 $('#mClose').onclick=closeModal;
 $('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+
+// Series toggles del gráfico de productos
+document.querySelectorAll('#skuToggles .series-tog').forEach(t=>t.onclick=()=>{
+  t.classList.toggle('on'); applySkuToggles();
+});
+
+// Orden de la lista detallada de SKUs
+document.querySelectorAll('#skuListSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#skuListSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); SKU_LIST_SORT = b.dataset.s; renderSkuList();
+});
 
 // Reportes rápidos (botones grandes que abren modales)
 document.querySelectorAll('.qr-btn').forEach(b=>b.onclick=()=>{
