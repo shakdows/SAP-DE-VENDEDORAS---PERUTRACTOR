@@ -211,7 +211,7 @@ function renderKPIs(rows){
   // cobertura de metas: venta de vendedores con meta ÷ suma de metas
   const ventaV={}; rows.forEach(r=>{ventaV[r.v]=(ventaV[r.v]||0)+r.tv;});
   let metaTotal=0, ventaConMeta=0;
-  Object.entries(ventaV).forEach(([v,vta])=>{ const m=metaDe(v); if(m>0){ metaTotal+=m; ventaConMeta+=vta; } });
+  Object.entries(ventaV).forEach(([v,vta])=>{ const m=metaDe(v); if(m>0){ metaTotal+=m; } ventaConMeta+=vta; });
   const cobertura = metaTotal ? ventaConMeta/metaTotal*100 : 0;
   const cobColor = cobertura>=100?C.green : cobertura>=70?C.amber : C.red;
   const cobBg = cobertura>=100?'#e9f9f1' : cobertura>=70?'#fff7ea' : '#ffe9ec';
@@ -1053,7 +1053,7 @@ function renderMetas(rows){
   const conMeta=arr.filter(x=>x.pct!==null);
   // stats globales
   const metaTotal=conMeta.reduce((a,x)=>a+x.meta,0);
-  const ventaTotal=conMeta.reduce((a,x)=>a+x.venta,0);
+  const ventaTotal=arr.reduce((a,x)=>a+x.venta,0);  // suma TODA la venta del equipo (con y sin meta)
   const pctGlobal=metaTotal? ventaTotal/metaTotal*100 : 0;
   const cumplieron=conMeta.filter(x=>x.pct>=100).length;
   const st=$('#metaStats');
