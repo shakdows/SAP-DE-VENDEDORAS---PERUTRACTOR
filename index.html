@@ -230,6 +230,48 @@ header{
 .qr-arr{font-family:'Archivo';font-weight:800;font-size:18px;color:var(--ink3);transition:.18s;flex:none}
 .qr-btn:hover .qr-arr{color:var(--amber);transform:translateX(3px)}
 
+/* ===== REORDENAR SECCIONES (drag & drop) ===== */
+.btn.edit-layout{display:inline-flex;align-items:center;gap:7px;width:auto;padding:0 14px}
+.btn.edit-layout .el-txt{font-family:'Archivo';font-weight:700;font-size:13px}
+.btn.edit-layout.active{background:var(--amber);border-color:var(--amber);color:#fff}
+.btn.edit-layout.active svg{stroke:#fff}
+@media(max-width:680px){.btn.edit-layout .el-txt{display:none}.btn.edit-layout{width:42px;padding:0}}
+
+.dash-section{position:relative}
+.sec-drag{display:none}
+/* En modo edición */
+body.editing #sections{}
+body.editing .dash-section{
+  border:2px dashed var(--line2);border-radius:16px;padding:10px 12px 4px;margin-bottom:16px;
+  background:rgba(245,158,11,.025);transition:border-color .15s,box-shadow .15s;cursor:grab;
+}
+body.editing .dash-section:hover{border-color:var(--amber);box-shadow:var(--sh)}
+body.editing .dash-section.dragging{opacity:.5;border-color:var(--amber);border-style:solid}
+body.editing .dash-section.drag-over{border-color:var(--amber);border-style:solid;box-shadow:0 0 0 3px rgba(245,158,11,.15)}
+body.editing .sec-drag{
+  display:flex;align-items:center;gap:9px;font-family:'Archivo';font-weight:800;font-size:13px;
+  color:var(--amber-d);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;
+  padding:7px 11px;background:#fff7ea;border:1px solid #fcd9a0;border-radius:9px;cursor:grab;user-select:none;
+}
+body.editing .sec-drag .drag-grip{font-size:17px;line-height:1;color:var(--amber);letter-spacing:-2px}
+body.editing .dash-section :is(button,input,select,a,canvas){pointer-events:none}
+body.editing .sec-drag,body.editing .dash-section{pointer-events:auto}
+/* banner de ayuda en modo edición */
+.edit-banner{display:none}
+body.editing .edit-banner{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  background:linear-gradient(135deg,#fff7ea,#fff);border:1.5px solid #fcd9a0;border-radius:13px;
+  padding:13px 18px;margin-bottom:18px;animation:fade .3s ease;
+}
+.edit-banner .eb-txt{font-size:13px;font-weight:600;color:var(--ink2)}
+.edit-banner .eb-txt b{color:var(--amber-d)}
+.edit-banner .eb-actions{display:flex;gap:9px}
+.edit-banner button{font-family:'Archivo';font-weight:700;font-size:12.5px;padding:8px 15px;border-radius:9px;cursor:pointer;border:1px solid var(--line2);background:var(--surface);color:var(--ink2);transition:.15s}
+.edit-banner button:hover{border-color:var(--amber)}
+.edit-banner button.primary{background:var(--amber);border-color:var(--amber);color:#fff}
+.edit-banner button.reset{color:var(--rose);border-color:#f3c6cd}
+.edit-banner button.reset:hover{background:var(--rose);border-color:var(--rose);color:#fff}
+
 /* ===== CUMPLIMIENTO DE METAS ===== */
 .meta-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin-bottom:18px}
 .meta-stat{background:var(--surface2);border:1px solid var(--line);border-radius:11px;padding:13px 15px}
@@ -486,6 +528,7 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
         <span class="hd-wm-text">SHAKDOWS</span>
       </div>
     </div>
+    <button class="btn edit-layout" id="editLayoutBtn" title="Reordenar las secciones del panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 3 5 3 5 7"/><polyline points="15 3 19 3 19 7"/><polyline points="9 21 5 21 5 17"/><polyline points="15 21 19 21 19 17"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span class="el-txt">Editar orden</span></button>
     <button class="btn refresh" id="refreshBtn" title="Volver a leer el Google Sheet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
     <div class="live local" id="liveStatus"><span class="dot"></span><span class="lt">Cargando…</span></div>
     <div class="period">Periodo <b id="periodLbl">02 — 25 May 2026</b></div>
@@ -522,6 +565,15 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
   <!-- KPIs -->
   <div class="kpis" id="kpis"></div>
 
+  <div id="sections">
+  <div class="edit-banner">
+    <div class="eb-txt">✏️ <b>Modo edición:</b> arrastra las secciones para reordenarlas a tu gusto. Tu orden se guarda solo en este navegador.</div>
+    <div class="eb-actions">
+      <button class="reset" id="resetLayoutBtn">↺ Restablecer</button>
+      <button class="primary" id="doneLayoutBtn">✓ Listo</button>
+    </div>
+  </div>
+  <section class="dash-section" data-sec="reportes"><div class="sec-drag"><span class="drag-grip">⠿</span> Reportes rápidos</div>
   <!-- REPORTES RAPIDOS -->
   <div class="quick-reports">
     <div class="qr-label">
@@ -564,6 +616,8 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
     </div>
   </div>
 
+  </section>
+  <section class="dash-section" data-sec="analista"><div class="sec-drag"><span class="drag-grip">⠿</span> Analista automático</div>
   <!-- ANALISTA AUTOMATICO -->
   <div class="insights" id="insights">
     <div class="ih">
@@ -574,6 +628,8 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
     <div class="ins-grid" id="insGrid"></div>
   </div>
 
+  </section>
+  <section class="dash-section" data-sec="evolucion"><div class="sec-drag"><span class="drag-grip">⠿</span> Evolución y composición</div>
   <!-- TENDENCIA + MIX -->
   <div class="section-ttl">Evolución y composición</div>
   <div class="grid g2">
@@ -602,6 +658,8 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
     </div>
   </div>
 
+  </section>
+  <section class="dash-section" data-sec="temporal"><div class="sec-drag"><span class="drag-grip">⠿</span> Análisis temporal</div>
   <!-- ANALISIS TEMPORAL -->
   <div class="section-ttl">Análisis temporal</div>
   <div class="grid g2b">
@@ -619,7 +677,9 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
     </div>
   </div>
 
-  <!-- COMPARADOR -->
+  </section>
+  <section class="dash-section" data-sec="ganancia"><div class="sec-drag"><span class="drag-grip">⠿</span> Análisis de ganancia</div>
+  <!-- GANANCIA -->
   <div class="section-ttl">Análisis de ganancia (margen)</div>
   <div class="grid g2b">
     <div class="card">
@@ -691,6 +751,8 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
     </div>
   </div>
 
+  </section>
+  <section class="dash-section" data-sec="metas"><div class="sec-drag"><span class="drag-grip">⠿</span> Cumplimiento de metas</div>
   <!-- CUMPLIMIENTO DE METAS -->
   <div class="section-ttl">Cumplimiento de metas por vendedor</div>
   <div class="grid">
@@ -715,7 +777,9 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
     </div>
   </div>
 
-  <!-- COMPARADOR -->
+  </section>
+  <section class="dash-section" data-sec="comparador"><div class="sec-drag"><span class="drag-grip">⠿</span> Comparador de periodos</div>
+  <!-- COMPARADOR PERIODOS -->
   <div class="section-ttl">Comparador de periodos</div>
   <div class="grid">
     <div class="card">
@@ -742,6 +806,8 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
     </div>
   </div>
 
+  </section>
+  <section class="dash-section" data-sec="dimension"><div class="sec-drag"><span class="drag-grip">⠿</span> Rendimiento por dimensión</div>
   <!-- VENDEDORES + LINEAS -->
   <div class="section-ttl">Rendimiento por dimensión</div>
   <div class="grid g2b">
@@ -775,6 +841,8 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
     </div>
   </div>
 
+  </section>
+  <section class="dash-section" data-sec="rankings"><div class="sec-drag"><span class="drag-grip">⠿</span> Rankings</div>
   <!-- RANKINGS -->
   <div class="section-ttl">Rankings</div>
   <div class="grid g2b">
@@ -790,6 +858,8 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
     </div>
   </div>
 
+  </section>
+  <section class="dash-section" data-sec="detalle"><div class="sec-drag"><span class="drag-grip">⠿</span> Detalle de transacciones</div>
   <!-- DETALLE -->
   <div class="section-ttl">Detalle de transacciones</div>
   <div class="grid">
@@ -808,6 +878,8 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
     </div>
   </div>
 
+  </section>
+  </div><!-- /#sections -->
   <footer>
     <div class="credit-badge">
       <span class="logo-mark d" style="width:22px;height:22px"></span>
