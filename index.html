@@ -81,11 +81,40 @@ header{
 .brand .sub{font-size:11.5px;color:var(--ink2);font-weight:600;letter-spacing:.01em}
 .brand .sub2{margin-top:1px}
 .hd .spacer{flex:1;display:flex;align-items:center;justify-content:center;min-width:0}
-.hd-watermark{display:flex;align-items:center;gap:14px;opacity:.9;user-select:none}
-.hd-watermark .logo-mark{width:62px;height:62px;opacity:1}
+.hd-watermark{display:flex;align-items:center;gap:14px;opacity:.9;user-select:none;position:relative;cursor:pointer;outline:none}
+.hd-watermark:hover{opacity:1}
+.hd-watermark .logo-mark{width:62px;height:62px;opacity:1;transition:transform .25s}
+.hd-watermark:hover .logo-mark{transform:scale(1.06) rotate(-3deg)}
 .hd-watermark .hd-wm-text{font-family:'Archivo',sans-serif;font-weight:900;font-size:clamp(24px,2.2vw,34px);letter-spacing:.10em;
   color:transparent;background:linear-gradient(135deg,var(--ink) 35%,var(--amber-d));-webkit-background-clip:text;background-clip:text;
   text-transform:uppercase;line-height:1;white-space:nowrap}
+/* Tooltip leyenda de los 6 ojos */
+.grima-tip{
+  position:absolute;top:calc(100% + 14px);left:50%;transform:translateX(-50%) translateY(-8px) scale(.97);
+  width:430px;max-width:88vw;z-index:120;
+  background:linear-gradient(160deg,#161d2e,#0f1422);color:#e8edf6;
+  border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:17px 18px 15px;
+  box-shadow:0 24px 60px -16px rgba(0,0,0,.65);
+  opacity:0;pointer-events:none;transition:opacity .22s ease,transform .22s ease;
+}
+.hd-watermark:hover .grima-tip,.hd-watermark:focus .grima-tip,.hd-watermark:focus-within .grima-tip{
+  opacity:1;transform:translateX(-50%) translateY(0) scale(1);pointer-events:auto;
+}
+.grima-tip::before{content:"";position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
+  border:8px solid transparent;border-bottom-color:#161d2e}
+.grima-tip .gt-head{display:flex;align-items:center;gap:12px;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,.10)}
+.grima-tip .gt-logo{width:38px;height:38px;flex:none;filter:invert(1) brightness(1.6)}
+.grima-tip .gt-title{font-family:'Archivo';font-weight:800;font-size:15px;color:#fff;letter-spacing:.01em}
+.grima-tip .gt-sub{font-size:11.5px;color:#9fb0c9;font-weight:600;margin-top:1px}
+.grima-tip .gt-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grima-tip .gt-cap{font-family:'Archivo';font-weight:800;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+.grima-tip .gt-eye{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
+.grima-tip .gt-n{width:18px;height:18px;border-radius:50%;flex:none;display:grid;place-items:center;
+  font-family:'Spline Sans Mono';font-weight:700;font-size:10px;color:#0f1422;background:var(--amber);margin-top:1px}
+.grima-tip .gt-eye b{display:block;font-family:'Archivo';font-weight:700;font-size:12.5px;color:#fff;line-height:1.2}
+.grima-tip .gt-eye span{font-size:10.5px;color:#9fb0c9;font-weight:500;line-height:1.25}
+.grima-tip .gt-foot{margin-top:11px;padding-top:11px;border-top:1px solid rgba(255,255,255,.10);
+  font-size:11.5px;color:#c3cee0;font-style:italic;line-height:1.4;text-align:center}
 @media(max-width:1380px){.hd-watermark{display:none}}
 .period{
   display:flex;align-items:center;gap:9px;font-family:'Spline Sans Mono';font-size:12px;
@@ -548,9 +577,33 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
       </div>
     </div>
     <div class="spacer">
-      <div class="hd-watermark" aria-hidden="true">
+      <div class="hd-watermark" tabindex="0" role="button" aria-label="Significado del logo Grima">
         <span class="logo-mark d"></span>
         <span class="hd-wm-text">SHAKDOWS</span>
+        <div class="grima-tip" role="tooltip">
+          <div class="gt-head">
+            <span class="logo-mark d gt-logo"></span>
+            <div>
+              <div class="gt-title">Los seis ojos de Grima</div>
+              <div class="gt-sub">El dragón que todo lo observa</div>
+            </div>
+          </div>
+          <div class="gt-cols">
+            <div class="gt-col">
+              <div class="gt-cap">Dominan el tiempo</div>
+              <div class="gt-eye"><span class="gt-n">1</span><div><b>Pasado</b><span>lo que ya ocurrió</span></div></div>
+              <div class="gt-eye"><span class="gt-n">2</span><div><b>Presente</b><span>lo que pasa ahora</span></div></div>
+              <div class="gt-eye"><span class="gt-n">3</span><div><b>Futuro</b><span>hacia dónde va todo</span></div></div>
+            </div>
+            <div class="gt-col">
+              <div class="gt-cap">Dominan la acción</div>
+              <div class="gt-eye"><span class="gt-n">4</span><div><b>Estrategia</b><span>trazar el rumbo</span></div></div>
+              <div class="gt-eye"><span class="gt-n">5</span><div><b>Oportunidades</b><span>ver lo que otros no</span></div></div>
+              <div class="gt-eye"><span class="gt-n">6</span><div><b>Amenazas</b><span>detectar el riesgo</span></div></div>
+            </div>
+          </div>
+          <div class="gt-foot">Seis ojos para ver todo el negocio a la vez y decidir con ventaja.</div>
+        </div>
       </div>
     </div>
     <button class="btn edit-layout" id="editLayoutBtn" title="Reordenar las secciones del panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 3 5 3 5 7"/><polyline points="15 3 19 3 19 7"/><polyline points="9 21 5 21 5 17"/><polyline points="15 21 19 21 19 17"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span class="el-txt">Editar orden</span></button>
