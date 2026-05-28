@@ -127,6 +127,13 @@ function renderKPIs(rows){
   const cant = sum(rows,'q');
   const mPct = venta ? margen/venta*100 : 0;
   const ticket = docs ? venta/docs : 0;
+  // cobertura de metas: venta de vendedores con meta ÷ suma de metas
+  const ventaV={}; rows.forEach(r=>{ventaV[r.v]=(ventaV[r.v]||0)+r.tv;});
+  let metaTotal=0, ventaConMeta=0;
+  Object.entries(ventaV).forEach(([v,vta])=>{ const m=metaDe(v); if(m>0){ metaTotal+=m; ventaConMeta+=vta; } });
+  const cobertura = metaTotal ? ventaConMeta/metaTotal*100 : 0;
+  const cobColor = cobertura>=100?C.green : cobertura>=70?C.amber : C.red;
+  const cobBg = cobertura>=100?'#e9f9f1' : cobertura>=70?'#fff7ea' : '#ffe9ec';
   const k = [
     {l:'Venta total',v:fUSD(venta),s:`${fNum(rows.length)} líneas · ${fNum(cant)} u.`,c:C.amber,bg:'#fff7ea',
       i:'<path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'},
@@ -138,6 +145,8 @@ function renderKPIs(rows){
       i:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'},
     {l:'Clientes activos',v:fNum(clis),s:`${(venta/Math.max(clis,1)).toLocaleString('en-US',{maximumFractionDigits:0,style:'currency',currency:'USD'})} / cliente`,c:C.violet,bg:'#f1ecff',
       i:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>'},
+    {l:'Cobertura de metas',v:fPct(cobertura),s:`<b>${fUSD(ventaConMeta)}</b> de ${fUSD(metaTotal)}`,c:cobColor,bg:cobBg,
+      i:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>'},
   ];
   $('#kpis').innerHTML = k.map(x=>`
     <div class="kpi" style="--accent:${x.c};--accent-bg:${x.bg}">
