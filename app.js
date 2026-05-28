@@ -4,18 +4,18 @@
 
 // Lista de tokens válidos con fechas de expiración (enero a diciembre 2026)
 const VALID_TOKENS = [
-  { token: 'PERUTRACTOR-2026-01-31-ABC123XY', expiry: '2026-01-31' },  // Enero
-  { token: 'PERUTRACTOR-2026-02-28-DEF456UV', expiry: '2026-02-28' },  // Febrero
-  { token: 'PERUTRACTOR-2026-03-31-GHI789WX', expiry: '2026-03-31' },  // Marzo
-  { token: 'PERUTRACTOR-2026-04-30-JKL012YZ', expiry: '2026-04-30' },  // Abril
-  { token: 'PERUTRACTOR-2026-05-31-MNO345AB', expiry: '2026-05-31' },  // Mayo
-  { token: 'PERUTRACTOR-2026-06-30-PQR678CD', expiry: '2026-06-30' },  // Junio
-  { token: 'PERUTRACTOR-2026-07-31-STU901EF', expiry: '2026-07-31' },  // Julio
-  { token: 'PERUTRACTOR-2026-08-31-VWX234GH', expiry: '2026-08-31' },  // Agosto
-  { token: 'PERUTRACTOR-2026-09-30-YZA567IJ', expiry: '2026-09-30' },  // Septiembre
-  { token: 'PERUTRACTOR-2026-10-31-BCD890KL', expiry: '2026-10-31' },  // Octubre
-  { token: 'PERUTRACTOR-2026-11-30-EFG123MN', expiry: '2026-11-30' },  // Noviembre
-  { token: 'PERUTRACTOR-2026-12-31-HIJ456OP', expiry: '2026-12-31' },  // Diciembre
+  { token: '84H5-QMWX-3UBJ-4GEY', expiry: '2026-01-31' },  // Enero
+  { token: 'RJ3D-KZAJ-DMZJ-G3AT', expiry: '2026-02-28' },  // Febrero
+  { token: 'QSW5-7B4V-DW25-7MKU', expiry: '2026-03-31' },  // Marzo
+  { token: 'K2VD-VKKF-NNY5-7WBD', expiry: '2026-04-30' },  // Abril
+  { token: 'UAYN-BGTP-JXSG-2SPQ', expiry: '2026-05-31' },  // Mayo
+  { token: 'BTXW-7CV2-EX6V-Y658', expiry: '2026-06-30' },  // Junio
+  { token: '2QMP-38NH-GZE7-WQBW', expiry: '2026-07-31' },  // Julio
+  { token: '26SA-C2FE-PJVG-SEBW', expiry: '2026-08-31' },  // Agosto
+  { token: '7ES9-U623-3PSN-6G53', expiry: '2026-09-30' },  // Septiembre
+  { token: '7TMB-7CAH-N2HX-524D', expiry: '2026-10-31' },  // Octubre
+  { token: 'UUWV-PG33-QAR9-5W3X', expiry: '2026-11-30' },  // Noviembre
+  { token: 'ASD6-88UW-CY6R-QGC8', expiry: '2026-12-31' },  // Diciembre
 ];
 
 const TOKEN_STORAGE_KEY = 'perutractor_dashboard_token';
