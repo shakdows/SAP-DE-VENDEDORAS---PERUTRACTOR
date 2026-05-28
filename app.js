@@ -11,6 +11,25 @@ const C = { amber:'#f59e0b', amber2:'#fb923c', amberD:'#b45309', teal:'#0ea5a4',
 const GRP = {1:'Cliente local final', 2:'Cliente local revendedor'};
 const DOW = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 
+/* ===== METAS POR VENDEDOR =====
+   Se emparejan por coincidencia de nombre (los datos traen nombre completo,
+   la tabla de metas usa el nombre corto). Edita aquí cuando cambien las metas. */
+const METAS = [
+  { match:'MARISOL',  meta:70000 },
+  { match:'JOHAMNA',  meta:40000 },
+  { match:'NORMA',    meta:40000 },
+  { match:'SUGEI',    meta:40000 },
+  { match:'LIDIA',    meta:40000 },
+  { match:'GIOVANNI', meta:40000 },
+  { match:'OFICINA',  meta:10000 },
+];
+// devuelve la meta asignada a un nombre de vendedor (0 si no tiene)
+function metaDe(nombre){
+  const up = (nombre||'').toUpperCase();
+  const m = METAS.find(x=>up.includes(x.match));
+  return m ? m.meta : 0;
+}
+
 /* ---- formatters ---- */
 const fUSD = n => '$'+(n||0).toLocaleString('en-US',{maximumFractionDigits:0});
 const fUSD2 = n => '$'+(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -543,15 +562,21 @@ const DETAIL = {
   ven(rows){
     const venta=sum(rows,'tv');
     const arr=Object.entries(groupAgg(rows,'v')).map(([k,v])=>({k,...v})).sort((a,b)=>b.venta-a.venta);
-    const body=arr.map((x,i)=>[
-      `<div class="rank"><span class="rk ${i<3?'top':''}">${i+1}</span>${x.k.split(' ').slice(0,2).join(' ')}</div>`,
-      fUSD2(x.venta), pctOf(x.venta,venta).toFixed(1)+'%', fNum(x.trans),
-      fUSD2(x.margen), `<span class="${x.margen>=0?'pos':'neg'}">${fPct(pctOf(x.margen,x.venta))}</span>`
-    ]);
+    const body=arr.map((x,i)=>{
+      const meta=metaDe(x.k);
+      const pct = meta>0 ? x.venta/meta*100 : null;
+      const pctCell = pct===null ? '<span style="color:var(--ink3)">—</span>'
+        : `<span class="${pct>=100?'pos':pct>=70?'':'neg'}" style="${pct>=70&&pct<100?'color:var(--amber-d)':''}">${pct.toFixed(0)}%</span>`;
+      return [
+        `<div class="rank"><span class="rk ${i<3?'top':''}">${i+1}</span>${x.k.split(' ').slice(0,2).join(' ')}</div>`,
+        fUSD2(x.venta), meta>0?fUSD(meta):'<span style="color:var(--ink3)">sin meta</span>', pctCell,
+        fNum(x.trans), `<span class="${x.margen>=0?'pos':'neg'}">${fPct(pctOf(x.margen,x.venta))}</span>`
+      ];
+    });
     return {title:'Detalle por vendedor',
       html: statRow([{l:'Vendedores',v:arr.length},{l:'Venta total',v:fUSD(venta),c:'var(--amber-d)'},{l:'Concentración top‑1',v:pctOf(arr[0].venta,venta).toFixed(0)+'%',c:'var(--rose)'}])
         + '<div class="mchart"><canvas id="mCanvas"></canvas></div>'
-        + miniTable(['Vendedor','Venta','% del total','Transac.','Margen','Margen %'], body),
+        + miniTable(['Vendedor','Venta','Meta','% Cumpl.','Transac.','Margen %'], body),
       chart(){ const top=arr.slice(0,11);
         modalChart=new Chart($('#mCanvas'),{type:'bar',data:{labels:top.map(x=>x.k.split(' ')[0]),
           datasets:[{label:'Venta',data:top.map(x=>x.venta),backgroundColor:C.amber,borderRadius:5},
@@ -909,6 +934,99 @@ function renderVenGain(rows){
   applyToggles('venGainToggles','#cVenGain');
 }
 
+/* ===== CUMPLIMIENTO DE METAS ===== */
+function metasData(rows){
+  // venta real por vendedor
+  const ventaV={}; rows.forEach(r=>{ventaV[r.v]=(ventaV[r.v]||0)+r.tv;});
+  // construir lista: todos los vendedores con datos + su meta
+  const arr=Object.entries(ventaV).map(([v,venta])=>{
+    const meta=metaDe(v);
+    return { v, venta, meta, pct: meta>0 ? venta/meta*100 : null };
+  });
+  // ordenar: con meta primero (por % desc), sin meta al final (por venta desc)
+  arr.sort((a,b)=>{
+    if(a.pct===null && b.pct===null) return b.venta-a.venta;
+    if(a.pct===null) return 1;
+    if(b.pct===null) return -1;
+    return b.pct-a.pct;
+  });
+  return arr;
+}
+function metaClass(pct){
+  if(pct===null) return 'none';
+  if(pct>=100) return 'ok';
+  if(pct>=70) return 'mid';
+  return 'low';
+}
+function renderMetas(rows){
+  const arr=metasData(rows);
+  const conMeta=arr.filter(x=>x.pct!==null);
+  // stats globales
+  const metaTotal=conMeta.reduce((a,x)=>a+x.meta,0);
+  const ventaTotal=conMeta.reduce((a,x)=>a+x.venta,0);
+  const pctGlobal=metaTotal? ventaTotal/metaTotal*100 : 0;
+  const cumplieron=conMeta.filter(x=>x.pct>=100).length;
+  const st=$('#metaStats');
+  if(st){
+    st.innerHTML = [
+      {l:'Meta total del equipo', v:fUSD(metaTotal), c:'var(--ink)'},
+      {l:'Venta acumulada', v:fUSD(ventaTotal), c:'var(--amber-d)'},
+      {l:'Cobertura global', v:pctGlobal.toFixed(0)+'%', c: pctGlobal>=100?'var(--emerald-d)':pctGlobal>=70?'var(--amber-d)':'var(--rose)'},
+      {l:'Metas cumplidas', v:cumplieron+' de '+conMeta.length, c:'var(--ink)'},
+    ].map(s=>`<div class="meta-stat"><div class="ml">${s.l}</div><div class="mv" style="color:${s.c}">${s.v}</div></div>`).join('');
+  }
+  // tarjetas
+  const list=$('#metaList');
+  if(list){
+    if(!arr.length){ list.innerHTML='<div class="empty">Sin datos para los filtros seleccionados</div>'; }
+    else list.innerHTML = arr.map(x=>{
+      const cls=metaClass(x.pct);
+      const w = x.pct===null ? 0 : Math.max(2, Math.min(100, x.pct));
+      const nm = x.v.split(' ').slice(0,2).join(' ');
+      const pctTxt = x.pct===null ? 'Sin meta' : x.pct.toFixed(0)+'%';
+      const badge = x.pct===null ? '' : x.pct>=100 ? '<span class="badge">cumplió</span>' : x.pct>=70 ? '<span class="badge">cerca</span>' : '<span class="badge">lejos</span>';
+      const metaTxt = x.pct===null ? 'sin meta asignada' : 'Meta '+fUSD(x.meta);
+      return `<div class="meta-row">
+        <div class="who"><div class="nm">${nm}</div><div class="sub2">${metaTxt}</div></div>
+        <div class="meta-bar-wrap">
+          <div class="meta-bar-top"><span class="real">${fUSD2(x.venta)}</span><span>${x.pct===null?'—':'de '+fUSD(x.meta)}</span></div>
+          <div class="meta-bar"><div class="fill ${cls}" style="width:${w}%"></div></div>
+        </div>
+        <div class="meta-pct ${cls}">${pctTxt}${badge}</div>
+      </div>`;
+    }).join('');
+  }
+  // gráfico de burbujas
+  renderMetaBubbles(conMeta);
+}
+function renderMetaBubbles(conMeta){
+  if(!$('#cMeta')) return;
+  const maxV=Math.max(1, ...conMeta.map(x=>Math.max(x.meta,x.venta)));
+  const pts=conMeta.map(x=>{
+    const cls=metaClass(x.pct);
+    const col = cls==='ok'?C.green : cls==='mid'?C.amber : C.red;
+    return { x:x.meta, y:x.venta, r: Math.max(7, Math.min(26, Math.sqrt(x.venta)/14)),
+      col, nombre:x.v.split(' ').slice(0,2).join(' '), pct:x.pct, meta:x.meta, venta:x.venta };
+  });
+  mk('#cMeta',{type:'bubble',
+    data:{datasets:[
+      {label:'Vendedores', data:pts.map(p=>({x:p.x,y:p.y,r:p.r})),
+        backgroundColor:pts.map(p=>p.col+'cc'), borderColor:pts.map(p=>p.col), borderWidth:1.5},
+      // línea diagonal 100% (venta = meta)
+      {type:'line', label:'Meta = Venta (100%)', data:[{x:0,y:0},{x:maxV,y:maxV}],
+        borderColor:C.mut2, borderWidth:1.5, borderDash:[6,5], pointRadius:0, fill:false, order:5}
+    ]},
+    options:{maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{
+          title:items=>{const i=items[0].dataIndex; return items[0].datasetIndex===0? pts[i].nombre : '';},
+          label:c=>{ if(c.datasetIndex!==0) return ''; const p=pts[c.dataIndex];
+            return [' Meta: '+fUSD(p.meta), ' Venta: '+fUSD2(p.venta), ' Cumplimiento: '+p.pct.toFixed(0)+'%']; }}}},
+      scales:{
+        x:{...gridOpt, title:{display:true,text:'Meta asignada (US$)',color:C.mut,font:{size:11}}, ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}},
+        y:{...gridOpt, title:{display:true,text:'Venta real (US$)',color:C.mut,font:{size:11}}, ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}}}}});
+}
+
 /* ===== COMPARADOR DE PERIODOS ===== */
 function periodStats(rows,d1,d2){
   const sub=rows.filter(r=>(!d1||r.f>=d1)&&(!d2||r.f<=d2));
@@ -976,6 +1094,7 @@ function render(){
     ['gainMix', ()=>renderGainMix(rows)],
     ['skuGain', ()=>renderSkuGain(rows)],
     ['venGain', ()=>renderVenGain(rows)],
+    ['metas',   ()=>renderMetas(rows)],
     ['compare', ()=>renderCompare()],
   ];
   for(const [name, fn] of steps){
