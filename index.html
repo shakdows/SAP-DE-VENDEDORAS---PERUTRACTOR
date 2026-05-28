@@ -230,6 +230,35 @@ header{
 .qr-arr{font-family:'Archivo';font-weight:800;font-size:18px;color:var(--ink3);transition:.18s;flex:none}
 .qr-btn:hover .qr-arr{color:var(--amber);transform:translateX(3px)}
 
+/* ===== CUMPLIMIENTO DE METAS ===== */
+.meta-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin-bottom:18px}
+.meta-stat{background:var(--surface2);border:1px solid var(--line);border-radius:11px;padding:13px 15px}
+.meta-stat .ml{font-size:10.5px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.03em}
+.meta-stat .mv{font-family:'Spline Sans Mono';font-weight:700;font-size:20px;margin-top:6px;line-height:1}
+.meta-list{display:flex;flex-direction:column;gap:10px}
+.meta-row{display:grid;grid-template-columns:1.3fr 2fr auto;gap:16px;align-items:center;
+  padding:13px 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface);transition:.15s}
+.meta-row:hover{box-shadow:var(--sh-sm);transform:translateY(-1px)}
+.meta-row .who{min-width:0}
+.meta-row .who .nm{font-family:'Archivo';font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta-row .who .sub2{font-size:11.5px;font-weight:600;color:var(--ink3);margin-top:2px;font-family:'Spline Sans Mono'}
+.meta-bar-wrap{display:flex;flex-direction:column;gap:5px;min-width:0}
+.meta-bar-top{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--ink3)}
+.meta-bar-top .real{color:var(--ink)}
+.meta-bar{height:11px;background:var(--surface2);border-radius:6px;overflow:hidden;position:relative;border:1px solid var(--line)}
+.meta-bar .fill{height:100%;border-radius:6px;transition:width .5s ease;min-width:3px}
+.meta-bar .fill.ok{background:linear-gradient(90deg,#34d399,var(--emerald))}
+.meta-bar .fill.mid{background:linear-gradient(90deg,#fbbf24,var(--amber))}
+.meta-bar .fill.low{background:linear-gradient(90deg,#fb7185,var(--rose))}
+.meta-bar .fill.none{background:var(--ink3);opacity:.35}
+.meta-pct{font-family:'Spline Sans Mono';font-weight:800;font-size:20px;text-align:right;min-width:74px;line-height:1}
+.meta-pct.ok{color:var(--emerald-d)}
+.meta-pct.mid{color:var(--amber-d)}
+.meta-pct.low{color:var(--rose)}
+.meta-pct.none{color:var(--ink3);font-size:13px}
+.meta-pct .badge{display:block;font-family:'Archivo';font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin-top:3px}
+@media(max-width:680px){.meta-row{grid-template-columns:1fr;gap:9px}.meta-pct{text-align:left}}
+
 /* ===== SERIES TOGGLES (botones-leyenda) ===== */
 .series-toggles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
 .series-toggles .toggle-label{
@@ -659,6 +688,30 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
       <div class="desc">No por cuánto venden — por cuánta ganancia generan realmente</div>
       <div class="info-box">Ordenados por <b>ganancia US$</b> aportada (de mayor a menor). La columna verde es el margen absoluto; la línea morada muestra su <b>margen %</b> (qué tan rentables son sus ventas). Un vendedor con buen margen US$ y buen margen % es ideal; alguien con mucho margen US$ pero margen % bajo está vendiendo mucho a precio justo, mientras que margen % alto con margen US$ bajo vende poco pero rentable.</div>
       <div class="series-toggles" id="venGainToggles"><span class="toggle-label">Filtrar:</span><button class="series-tog on" data-s="0" data-color="amber"><span class="dot"></span>Venta</button><button class="series-tog on" data-s="1" data-color="green"><span class="dot"></span>Ganancia US$</button><button class="series-tog on" data-s="2" data-color="violet"><span class="dot"></span>Margen %</button></div><div class="chart-box tall"><canvas id="cVenGain"></canvas></div>
+    </div>
+  </div>
+
+  <!-- CUMPLIMIENTO DE METAS -->
+  <div class="section-ttl">Cumplimiento de metas por vendedor</div>
+  <div class="grid">
+    <div class="card">
+      <h3>Avance vs meta asignada
+        <span style="display:flex;gap:8px;align-items:center"><span class="tag">% Cobertura</span><button class="info-btn" title="¿Cómo leer esto?">i</button></span>
+      </h3>
+      <div class="desc">% Cobertura = Ventas acumuladas ÷ Meta asignada · ordenado por cumplimiento</div>
+      <div class="info-box">Cada tarjeta muestra la <b>venta real</b> del vendedor frente a su <b>meta</b>, con una barra de progreso. Verde = meta cumplida (≥100%), ámbar = cerca (70–99%), rojo = lejos (&lt;70%). Los vendedores sin meta asignada aparecen al final marcados como "sin meta". El cálculo respeta los filtros activos (si filtras por fecha, verás el avance de ese periodo).</div>
+      <div id="metaStats" class="meta-stats"></div>
+      <div id="metaList" class="meta-list"></div>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <h3>Mapa de cumplimiento
+        <span style="display:flex;gap:8px;align-items:center"><span class="tag">Meta vs Venta vs %</span><button class="info-btn" title="¿Cómo leer esto?">i</button></span>
+      </h3>
+      <div class="desc">Burbujas: posición horizontal = meta · vertical = venta real · tamaño y color = % de cumplimiento</div>
+      <div class="info-box">Cada burbuja es un vendedor. El <b>eje horizontal</b> es su meta, el <b>eje vertical</b> su venta real. La <b>línea diagonal</b> marca el 100% (venta = meta): las burbujas por encima superaron su meta, las de abajo no la alcanzaron. El tamaño y color reflejan el % de cumplimiento.</div>
+      <div class="chart-box tall" style="height:380px"><canvas id="cMeta"></canvas></div>
     </div>
   </div>
 
