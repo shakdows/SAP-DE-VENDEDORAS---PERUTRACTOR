@@ -230,47 +230,42 @@ header{
 .qr-arr{font-family:'Archivo';font-weight:800;font-size:18px;color:var(--ink3);transition:.18s;flex:none}
 .qr-btn:hover .qr-arr{color:var(--amber);transform:translateX(3px)}
 
-/* ===== REORDENAR SECCIONES (drag & drop) ===== */
+/* ===== REORDENAR SECCIONES (panel compacto) ===== */
 .btn.edit-layout{display:inline-flex;align-items:center;gap:7px;width:auto;padding:0 14px}
 .btn.edit-layout .el-txt{font-family:'Archivo';font-weight:700;font-size:13px}
 .btn.edit-layout.active{background:var(--amber);border-color:var(--amber);color:#fff}
 .btn.edit-layout.active svg{stroke:#fff}
 @media(max-width:680px){.btn.edit-layout .el-txt{display:none}.btn.edit-layout{width:42px;padding:0}}
-
 .dash-section{position:relative}
-.sec-drag{display:none}
-/* En modo edición */
-body.editing #sections{}
-body.editing .dash-section{
-  border:2px dashed var(--line2);border-radius:16px;padding:10px 12px 4px;margin-bottom:16px;
-  background:rgba(245,158,11,.025);transition:border-color .15s,box-shadow .15s;cursor:grab;
+.sec-drag{display:none}  /* el asa antigua ya no se usa */
+
+/* Modal compacto de orden */
+.layout-modal{max-width:440px}
+.layout-modal-sub{font-size:12.5px;color:var(--ink3);font-weight:500;padding:0 22px 4px}
+.layout-list{display:flex;flex-direction:column;gap:8px;padding:16px 22px 6px;max-height:60vh;overflow-y:auto}
+.layout-item{
+  display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:11px;
+  border:1.5px solid var(--line);background:var(--surface);cursor:grab;transition:.14s;user-select:none;
 }
-body.editing .dash-section:hover{border-color:var(--amber);box-shadow:var(--sh)}
-body.editing .dash-section.dragging{opacity:.5;border-color:var(--amber);border-style:solid}
-body.editing .dash-section.drag-over{border-color:var(--amber);border-style:solid;box-shadow:0 0 0 3px rgba(245,158,11,.15)}
-body.editing .sec-drag{
-  display:flex;align-items:center;gap:9px;font-family:'Archivo';font-weight:800;font-size:13px;
-  color:var(--amber-d);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;
-  padding:7px 11px;background:#fff7ea;border:1px solid #fcd9a0;border-radius:9px;cursor:grab;user-select:none;
-}
-body.editing .sec-drag .drag-grip{font-size:17px;line-height:1;color:var(--amber);letter-spacing:-2px}
-body.editing .dash-section :is(button,input,select,a,canvas){pointer-events:none}
-body.editing .sec-drag,body.editing .dash-section{pointer-events:auto}
-/* banner de ayuda en modo edición */
-.edit-banner{display:none}
-body.editing .edit-banner{
-  display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
-  background:linear-gradient(135deg,#fff7ea,#fff);border:1.5px solid #fcd9a0;border-radius:13px;
-  padding:13px 18px;margin-bottom:18px;animation:fade .3s ease;
-}
-.edit-banner .eb-txt{font-size:13px;font-weight:600;color:var(--ink2)}
-.edit-banner .eb-txt b{color:var(--amber-d)}
-.edit-banner .eb-actions{display:flex;gap:9px}
-.edit-banner button{font-family:'Archivo';font-weight:700;font-size:12.5px;padding:8px 15px;border-radius:9px;cursor:pointer;border:1px solid var(--line2);background:var(--surface);color:var(--ink2);transition:.15s}
-.edit-banner button:hover{border-color:var(--amber)}
-.edit-banner button.primary{background:var(--amber);border-color:var(--amber);color:#fff}
-.edit-banner button.reset{color:var(--rose);border-color:#f3c6cd}
-.edit-banner button.reset:hover{background:var(--rose);border-color:var(--rose);color:#fff}
+.layout-item:hover{border-color:var(--amber);background:#fffdf8}
+.layout-item.dragging{opacity:.45;border-style:dashed}
+.layout-item.drag-over{border-color:var(--amber);box-shadow:0 0 0 3px rgba(245,158,11,.16)}
+.layout-item .li-grip{font-size:16px;color:var(--ink3);letter-spacing:-2px;line-height:1;cursor:grab}
+.layout-item .li-num{width:22px;height:22px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);
+  display:grid;place-items:center;font-family:'Spline Sans Mono';font-weight:700;font-size:11px;color:var(--ink2);flex:none}
+.layout-item .li-ic{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;flex:none;font-size:14px}
+.layout-item .li-name{flex:1;font-family:'Archivo';font-weight:700;font-size:13.5px;color:var(--ink);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.layout-item .li-moves{display:flex;gap:3px;flex:none}
+.layout-item .li-moves button{width:26px;height:26px;border-radius:7px;border:1px solid var(--line2);background:var(--surface);
+  color:var(--ink2);cursor:pointer;font-size:12px;display:grid;place-items:center;transition:.13s;padding:0}
+.layout-item .li-moves button:hover:not(:disabled){border-color:var(--amber);color:var(--amber-d);background:#fff7ea}
+.layout-item .li-moves button:disabled{opacity:.28;cursor:default}
+.layout-modal-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 22px 20px;border-top:1px solid var(--line);margin-top:6px}
+.layout-modal-foot button{font-family:'Archivo';font-weight:700;font-size:13px;padding:9px 17px;border-radius:9px;cursor:pointer;border:1px solid var(--line2);background:var(--surface);color:var(--ink2);transition:.15s}
+.layout-modal-foot button.primary{background:var(--amber);border-color:var(--amber);color:#fff}
+.layout-modal-foot button.primary:hover{background:var(--amber-d)}
+.layout-modal-foot button.reset{color:var(--rose);border-color:#f3c6cd}
+.layout-modal-foot button.reset:hover{background:var(--rose);border-color:var(--rose);color:#fff}
 
 /* ===== CUMPLIMIENTO DE METAS ===== */
 .meta-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin-bottom:18px}
@@ -566,13 +561,6 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
   <div class="kpis" id="kpis"></div>
 
   <div id="sections">
-  <div class="edit-banner">
-    <div class="eb-txt">✏️ <b>Modo edición:</b> arrastra las secciones para reordenarlas a tu gusto. Tu orden se guarda solo en este navegador.</div>
-    <div class="eb-actions">
-      <button class="reset" id="resetLayoutBtn">↺ Restablecer</button>
-      <button class="primary" id="doneLayoutBtn">✓ Listo</button>
-    </div>
-  </div>
   <section class="dash-section" data-sec="reportes"><div class="sec-drag"><span class="drag-grip">⠿</span> Reportes rápidos</div>
   <!-- REPORTES RAPIDOS -->
   <div class="quick-reports">
@@ -907,6 +895,22 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
       <button class="modal-x" id="mClose" aria-label="Cerrar">×</button>
     </div>
     <div class="modal-b" id="mBody"></div>
+  </div>
+</div>
+
+<!-- VENTANA COMPACTA: reordenar secciones -->
+<div class="modal-ov" id="layoutModal">
+  <div class="modal layout-modal">
+    <div class="modal-h">
+      <h3>✏️ Ordenar secciones</h3>
+      <button class="modal-x" id="layoutClose" aria-label="Cerrar">×</button>
+    </div>
+    <div class="layout-modal-sub">Arrastra para reordenar · usa ▲▼ para mover · la página se actualiza al instante</div>
+    <div class="layout-list" id="layoutList"></div>
+    <div class="layout-modal-foot">
+      <button class="reset" id="layoutReset">↺ Restablecer orden original</button>
+      <button class="primary" id="layoutDone">✓ Listo</button>
+    </div>
   </div>
 </div>
 
