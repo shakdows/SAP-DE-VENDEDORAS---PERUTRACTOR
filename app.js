@@ -1295,6 +1295,85 @@ async function loadLive(manual){
   }
 }
 
+/* ===== REORDENAR SECCIONES (drag & drop + persistencia local) ===== */
+const LAYOUT_KEY = 'ctp_dashboard_layout_v1';
+
+function applyLayout(){
+  // lee el orden guardado en ESTE navegador y reordena las secciones
+  let order;
+  try { order = JSON.parse(localStorage.getItem(LAYOUT_KEY) || 'null'); } catch(e){ order = null; }
+  if(!order || !Array.isArray(order)) return;
+  const cont = document.getElementById('sections');
+  if(!cont) return;
+  order.forEach(sec=>{
+    const el = cont.querySelector(`.dash-section[data-sec="${sec}"]`);
+    if(el) cont.appendChild(el); // mover al final en el orden guardado
+  });
+}
+function saveLayout(){
+  const cont = document.getElementById('sections');
+  if(!cont) return;
+  const order = [...cont.querySelectorAll('.dash-section')].map(s=>s.dataset.sec);
+  try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(order)); } catch(e){ /* modo privado */ }
+}
+function setupLayoutEditor(){
+  const cont = document.getElementById('sections');
+  const btn = document.getElementById('editLayoutBtn');
+  if(!cont || !btn) return;
+
+  // aplicar orden guardado al cargar
+  applyLayout();
+
+  let editing = false;
+  function setEditing(on){
+    editing = on;
+    document.body.classList.toggle('editing', on);
+    btn.classList.toggle('active', on);
+    const txt = btn.querySelector('.el-txt'); if(txt) txt.textContent = on ? 'Editando…' : 'Editar orden';
+    // activar/desactivar draggable
+    cont.querySelectorAll('.dash-section').forEach(s=> s.draggable = on);
+    if(on) cont.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+  btn.onclick = ()=> setEditing(!editing);
+  const done = document.getElementById('doneLayoutBtn');
+  if(done) done.onclick = ()=> setEditing(false);
+  const reset = document.getElementById('resetLayoutBtn');
+  if(reset) reset.onclick = ()=>{
+    try { localStorage.removeItem(LAYOUT_KEY); } catch(e){}
+    location.reload();
+  };
+
+  // Drag & drop nativo
+  let dragEl = null;
+  cont.addEventListener('dragstart', e=>{
+    const sec = e.target.closest('.dash-section');
+    if(!sec || !editing) return;
+    dragEl = sec; sec.classList.add('dragging');
+    e.dataTransfer.effectAllowed='move';
+    try { e.dataTransfer.setData('text/plain', sec.dataset.sec); } catch(_){}
+  });
+  cont.addEventListener('dragend', ()=>{
+    if(dragEl) dragEl.classList.remove('dragging');
+    cont.querySelectorAll('.drag-over').forEach(s=>s.classList.remove('drag-over'));
+    dragEl=null;
+    saveLayout();
+  });
+  cont.addEventListener('dragover', e=>{
+    if(!editing || !dragEl) return;
+    e.preventDefault();
+    const target = e.target.closest('.dash-section');
+    if(!target || target===dragEl) return;
+    cont.querySelectorAll('.drag-over').forEach(s=>{ if(s!==target) s.classList.remove('drag-over'); });
+    target.classList.add('drag-over');
+    // insertar antes o después según posición del cursor
+    const rect = target.getBoundingClientRect();
+    const after = (e.clientY - rect.top) > rect.height/2;
+    if(after) target.after(dragEl); else target.before(dragEl);
+  });
+  cont.addEventListener('drop', e=>{ if(editing){ e.preventDefault(); saveLayout(); } });
+}
+setupLayoutEditor();
+
 /* ===== GO ===== */
 buildSelectors();
 buildCompare();
