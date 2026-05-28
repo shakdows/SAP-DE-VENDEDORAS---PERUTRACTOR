@@ -29,7 +29,7 @@ Chart.defaults.plugins.tooltip.titleFont = {weight:'700',size:12};
 Chart.defaults.plugins.tooltip.bodyFont = {weight:'600',size:12};
 
 /* ===== STATE ===== */
-const ST = { cli:'', ven:'', lf:'', grp:'', doc:'', d1:'', d2:'', trend:'tv', gran:'d', mixMode:'m',
+const ST = { cli:'', sku:'', ven:'', lf:'', grp:'', doc:'', d1:'', d2:'', trend:'tv', gran:'d', mixMode:'m',
              sort:{col:'f', dir:-1}, page:1, per:14 };
 let charts = {};
 let USER_INTERACTED = false;  // se activa cuando el usuario toca cualquier filtro
@@ -61,6 +61,7 @@ function buildSelectors(){
 /* ===== FILTER ENGINE ===== */
 function applyFilters(){
   const q = ST.cli.toLowerCase();
+  const qs = ST.sku.toLowerCase();
   return DATA.filter(r=>{
     if(ST.ven && r.v!==ST.ven) return false;
     if(ST.lf && r.lf!==ST.lf) return false;
@@ -69,18 +70,21 @@ function applyFilters(){
     if(ST.d1 && r.f<ST.d1) return false;
     if(ST.d2 && r.f>ST.d2) return false;
     if(q && !r.cl.toLowerCase().includes(q)) return false;
+    if(qs && !(r.sku.toLowerCase().includes(qs) || r.d.toLowerCase().includes(qs))) return false;
     return true;
   });
 }
 // filtro que respeta todo MENOS el rango de fecha global (para el comparador)
 function filterNonDate(){
   const q = ST.cli.toLowerCase();
+  const qs = ST.sku.toLowerCase();
   return DATA.filter(r=>{
     if(ST.ven && r.v!==ST.ven) return false;
     if(ST.lf && r.lf!==ST.lf) return false;
     if(ST.grp && String(r.g)!==ST.grp) return false;
     if(ST.doc && r.doc!==ST.doc) return false;
     if(q && !r.cl.toLowerCase().includes(q)) return false;
+    if(qs && !(r.sku.toLowerCase().includes(qs) || r.d.toLowerCase().includes(qs))) return false;
     return true;
   });
 }
@@ -367,6 +371,7 @@ function renderDetail(rows){
 function renderChips(){
   const items=[];
   if(ST.cli) items.push(['cli','Cliente',ST.cli]);
+  if(ST.sku) items.push(['sku','SKU/producto',ST.sku]);
   if(ST.ven) items.push(['ven','Vendedor',ST.ven.split(' ')[0]+' '+(ST.ven.split(' ')[1]||'')]);
   if(ST.lf) items.push(['lf','Línea',ST.lf]);
   if(ST.grp) items.push(['grp','Grupo',GRP[ST.grp]]);
@@ -378,7 +383,7 @@ function renderChips(){
     : '<span style="color:var(--mut2);font-size:12px;font-weight:600">Sin filtros activos · mostrando todo el periodo</span>';
   $('#chips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
     const k=c.dataset.k; ST[k]='';
-    const map={cli:'#fCli',ven:'#fVen',lf:'#fLf',grp:'#fGrp',doc:'#fDoc',d1:'#fD1',d2:'#fD2'};
+    const map={cli:'#fCli',sku:'#fSku',ven:'#fVen',lf:'#fLf',grp:'#fGrp',doc:'#fDoc',d1:'#fD1',d2:'#fD2'};
     $(map[k]).value=''; ST.page=1; render();
   });
 }
@@ -982,6 +987,7 @@ function render(){
 /* ===== EVENTS ===== */
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
 $('#fCli').addEventListener('input', debounce(e=>{USER_INTERACTED=true;ST.cli=e.target.value;ST.page=1;render();},220));
+$('#fSku').addEventListener('input', debounce(e=>{USER_INTERACTED=true;ST.sku=e.target.value;ST.page=1;render();},220));
 $('#fVen').addEventListener('change',e=>{USER_INTERACTED=true;ST.ven=e.target.value;ST.page=1;render();});
 $('#fLf').addEventListener('change',e=>{USER_INTERACTED=true;ST.lf=e.target.value;ST.page=1;render();});
 $('#fGrp').addEventListener('change',e=>{USER_INTERACTED=true;ST.grp=e.target.value;ST.page=1;render();});
@@ -989,8 +995,8 @@ $('#fDoc').addEventListener('change',e=>{USER_INTERACTED=true;ST.doc=e.target.va
 $('#fD1').addEventListener('change',e=>{USER_INTERACTED=true;ST.d1=e.target.value;ST.page=1;render();});
 $('#fD2').addEventListener('change',e=>{USER_INTERACTED=true;ST.d2=e.target.value;ST.page=1;render();});
 $('#resetBtn').onclick=()=>{
-  Object.assign(ST,{cli:'',ven:'',lf:'',grp:'',doc:'',d1:'',d2:'',page:1});
-  ['#fCli','#fVen','#fLf','#fGrp','#fDoc','#fD1','#fD2'].forEach(id=>$(id).value='');
+  Object.assign(ST,{cli:'',sku:'',ven:'',lf:'',grp:'',doc:'',d1:'',d2:'',page:1});
+  ['#fCli','#fSku','#fVen','#fLf','#fGrp','#fDoc','#fD1','#fD2'].forEach(id=>$(id).value='');
   render();
 };
 $('#trendSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
@@ -1140,14 +1146,16 @@ async function loadLive(manual){
     const userTouched = USER_INTERACTED;
     if(!userTouched){
       buildCompare();
-      Object.assign(ST,{cli:'',ven:'',lf:'',grp:'',doc:'',d1:'',d2:'',page:1});
-      ['#fCli','#fVen','#fLf','#fGrp','#fDoc','#fD1','#fD2'].forEach(id=>{if($(id))$(id).value='';});
+      Object.assign(ST,{cli:'',sku:'',ven:'',lf:'',grp:'',doc:'',d1:'',d2:'',page:1});
+      ['#fCli','#fSku','#fVen','#fLf','#fGrp','#fDoc','#fD1','#fD2'].forEach(id=>{if($(id))$(id).value='';});
     } else {
       // mantener selección del usuario; reponer el valor visible en los <select> que se reconstruyeron
       if(ST.ven) $('#fVen').value = ST.ven;
       if(ST.lf)  $('#fLf').value  = ST.lf;
       if(ST.grp) $('#fGrp').value = ST.grp;
       if(ST.doc) $('#fDoc').value = ST.doc;
+      if(ST.cli) $('#fCli').value = ST.cli;
+      if(ST.sku) $('#fSku').value = ST.sku;
     }
     render();
     const now=new Date().toLocaleString('es-PE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
