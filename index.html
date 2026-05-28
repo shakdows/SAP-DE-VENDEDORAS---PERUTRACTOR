@@ -40,8 +40,27 @@ body{
   color:var(--ink); font-family:'Manrope',sans-serif; line-height:1.5;
   -webkit-font-smoothing:antialiased; min-height:100vh; font-size:15px;
 }
+/* ===== MARCA DE AGUA GIGANTE (autoría) ===== */
+.watermark-bg{
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  display:flex; align-items:center; justify-content:center; overflow:hidden; user-select:none;
+}
+.watermark-bg .wm-center{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1vh;
+  opacity:.11;
+  transform:rotate(-18deg) scale(1.35);
+}
+.watermark-bg .wm-big-logo{
+  width:min(46vw,520px); height:min(46vw,520px);
+}
+.watermark-bg .wm-big-text{
+  font-family:'Archivo',sans-serif; font-weight:900;
+  font-size:min(14vw,170px); letter-spacing:.06em; color:var(--ink);
+  line-height:.9; text-transform:uppercase; white-space:nowrap;
+}
+@media print{ .watermark-bg{ display:none; } }
 ::selection{background:var(--amber);color:#fff}
-.wrap{max-width:1480px;margin:0 auto;padding:0 22px 80px}
+.wrap{max-width:1480px;margin:0 auto;padding:0 22px 80px;position:relative;z-index:1}
 
 /* ===== HEADER ===== */
 header{
@@ -60,7 +79,13 @@ header{
 .logo::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent 0 6px,rgba(0,0,0,.08) 6px 9px)}
 .brand h1{font-family:'Archivo';font-weight:800;font-size:18px;letter-spacing:-.02em;line-height:1.15;color:var(--ink)}
 .brand .sub{font-size:11.5px;color:var(--ink2);font-weight:600;letter-spacing:.01em}
-.hd .spacer{flex:1}
+.hd .spacer{flex:1;display:flex;align-items:center;justify-content:center;min-width:0}
+.hd-watermark{display:flex;align-items:center;gap:14px;opacity:.9;user-select:none}
+.hd-watermark .logo-mark{width:62px;height:62px;opacity:1}
+.hd-watermark .hd-wm-text{font-family:'Archivo',sans-serif;font-weight:900;font-size:clamp(24px,2.2vw,34px);letter-spacing:.10em;
+  color:transparent;background:linear-gradient(135deg,var(--ink) 35%,var(--amber-d));-webkit-background-clip:text;background-clip:text;
+  text-transform:uppercase;line-height:1;white-space:nowrap}
+@media(max-width:1380px){.hd-watermark{display:none}}
 .period{
   display:flex;align-items:center;gap:9px;font-family:'Spline Sans Mono';font-size:12px;
   color:var(--ink2);background:var(--surface);border:1px solid var(--line);
@@ -135,7 +160,7 @@ header{
 .g2{grid-template-columns:1.55fr 1fr}
 .g2b{grid-template-columns:1fr 1fr}
 .card{
-  background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:19px 21px;
+  background:rgba(255,255,255,.93);border:1px solid var(--line);border-radius:16px;padding:19px 21px;
   box-shadow:var(--sh);min-width:0;
 }
 .card h3{font-family:'Archivo';font-weight:700;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:3px;color:var(--ink)}
@@ -410,6 +435,13 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
 </style>
 </head>
 <body>
+<!-- MARCA DE AGUA GIGANTE DE FONDO (autoría Shakdows) -->
+<div class="watermark-bg" aria-hidden="true">
+  <div class="wm-center">
+    <span class="logo-mark d wm-big-logo"></span>
+    <span class="wm-big-text">SHAKDOWS</span>
+  </div>
+</div>
 <header>
   <div class="hd">
     <div class="brand">
@@ -419,7 +451,12 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
         <div class="sub">Analítica comercial SAP — Maquinaria pesada · Lima, Perú · por <span class="logo-mark d" style="width:14px;height:14px;vertical-align:-2px;margin-right:1px"></span><b style="color:var(--amber-d)">Shakdows</b></div>
       </div>
     </div>
-    <div class="spacer"></div>
+    <div class="spacer">
+      <div class="hd-watermark" aria-hidden="true">
+        <span class="logo-mark d"></span>
+        <span class="hd-wm-text">SHAKDOWS</span>
+      </div>
+    </div>
     <button class="btn refresh" id="refreshBtn" title="Volver a leer el Google Sheet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
     <div class="live local" id="liveStatus"><span class="dot"></span><span class="lt">Cargando…</span></div>
     <div class="period">Periodo <b id="periodLbl">02 — 25 May 2026</b></div>
