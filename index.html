@@ -93,7 +93,7 @@ header{
 /* Tooltip leyenda de los 6 ojos */
 .grima-tip{
   position:absolute;top:calc(100% + 16px);left:50%;transform:translateX(-50%) translateY(-12px) scale(.94);
-  width:430px;max-width:88vw;z-index:120;
+  width:460px;max-width:90vw;z-index:120;
   background:linear-gradient(160deg,#1a2236,#0d1119);color:#e8edf6;
   border:1.5px solid var(--amber);border-radius:16px;padding:17px 18px 15px;
   box-shadow:0 0 0 4px rgba(245,158,11,.14), 0 28px 64px -14px rgba(0,0,0,.7), 0 0 40px -6px rgba(245,158,11,.35);
@@ -108,20 +108,21 @@ header{
 .grima-tip::before{content:"";position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
   border:9px solid transparent;border-bottom-color:var(--amber)}
 .grima-tip .gt-head{display:flex;align-items:center;gap:12px;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid rgba(245,158,11,.22)}
-.grima-tip .gt-lore{font-size:11.5px;color:#c3cee0;line-height:1.5;margin-bottom:13px;font-style:italic}
+.grima-tip .gt-lore{font-size:11.5px;color:#dfe6f2;line-height:1.55;margin-bottom:13px;font-style:italic}
 .grima-tip .gt-logo{width:40px;height:40px;flex:none;filter:invert(1) brightness(1.6);
   filter:invert(50%) sepia(80%) saturate(1200%) hue-rotate(360deg) brightness(102%) contrast(95%)}
 .grima-tip .gt-title{font-family:'Archivo';font-weight:800;font-size:16px;color:var(--amber);letter-spacing:.01em}
-.grima-tip .gt-sub{font-size:11.5px;color:#9fb0c9;font-weight:600;margin-top:1px}
+.grima-tip .gt-sub{font-size:11.5px;color:#c7d2e3;font-weight:600;margin-top:1px}
 .grima-tip .gt-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .grima-tip .gt-cap{font-family:'Archivo';font-weight:800;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
 .grima-tip .gt-eye{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
 .grima-tip .gt-n{width:18px;height:18px;border-radius:50%;flex:none;display:grid;place-items:center;
   font-family:'Spline Sans Mono';font-weight:700;font-size:10px;color:#0f1422;background:var(--amber);margin-top:1px}
 .grima-tip .gt-eye b{display:block;font-family:'Archivo';font-weight:700;font-size:12.5px;color:#fff;line-height:1.2}
-.grima-tip .gt-eye span{font-size:10.5px;color:#9fb0c9;font-weight:500;line-height:1.25}
+.grima-tip .gt-eye span{font-size:10.5px;color:#c0cbdd;font-weight:500;line-height:1.25}
 .grima-tip .gt-foot{margin-top:11px;padding-top:11px;border-top:1px solid rgba(255,255,255,.10);
-  font-size:11.5px;color:#c3cee0;font-style:italic;line-height:1.4;text-align:center}
+  font-size:11.5px;color:#dfe6f2;font-style:italic;line-height:1.45;text-align:center}
+.grima-tip .gt-shak{margin-top:13px;padding-top:13px;border-top:1px solid rgba(245,158,11,.22)}
 @media(max-width:1380px){.hd-watermark{display:none}}
 .period{
   display:flex;align-items:center;gap:9px;font-family:'Spline Sans Mono';font-size:12px;
@@ -611,6 +612,10 @@ footer{margin-top:40px;padding-top:26px;border-top:1px solid var(--line);text-al
             </div>
           </div>
           <div class="gt-foot">Seis ojos para ver todo el negocio a la vez y decidir con ventaja.</div>
+          <div class="gt-shak">
+            <div class="gt-cap" style="margin-bottom:7px">¿Y "Shakdows"?</div>
+            <div class="gt-lore" style="margin-bottom:0">Un nombre nacido entre hermanos, forjado a su manera, que sobrevivió al paso de los años. En la mesa, cuando las cartas caían, lo llamaron <b style="color:var(--amber)">"shake down"</b> — el que desmorona al rival sin que este lo vea venir. El nombre se quedó. Porque hay quienes juegan las cartas… y quienes leen al jugador.</div>
+          </div>
         </div>
       </div>
     </div>
