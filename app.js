@@ -1295,11 +1295,23 @@ async function loadLive(manual){
   }
 }
 
-/* ===== REORDENAR SECCIONES (drag & drop + persistencia local) ===== */
+/* ===== REORDENAR SECCIONES (panel compacto + persistencia local) ===== */
 const LAYOUT_KEY = 'ctp_dashboard_layout_v1';
+// nombre legible + ícono por sección (para la ventanita)
+const SEC_META = {
+  reportes:  {nm:'Reportes rápidos',          ic:'⚡', bg:'#fff7ea'},
+  analista:  {nm:'Analista automático',       ic:'💡', bg:'#f1ecff'},
+  evolucion: {nm:'Evolución y composición',   ic:'📈', bg:'#e9f9f1'},
+  temporal:  {nm:'Análisis temporal',         ic:'🗓️', bg:'#eaf1ff'},
+  ganancia:  {nm:'Análisis de ganancia',      ic:'💰', bg:'#e9f9f1'},
+  metas:     {nm:'Cumplimiento de metas',     ic:'🎯', bg:'#fff7ea'},
+  comparador:{nm:'Comparador de periodos',    ic:'⚖️', bg:'#eaf1ff'},
+  dimension: {nm:'Rendimiento por dimensión', ic:'📊', bg:'#f1ecff'},
+  rankings:  {nm:'Rankings',                  ic:'🏆', bg:'#fff7ea'},
+  detalle:   {nm:'Detalle de transacciones',  ic:'📋', bg:'#eef1f6'},
+};
 
 function applyLayout(){
-  // lee el orden guardado en ESTE navegador y reordena las secciones
   let order;
   try { order = JSON.parse(localStorage.getItem(LAYOUT_KEY) || 'null'); } catch(e){ order = null; }
   if(!order || !Array.isArray(order)) return;
@@ -1307,70 +1319,103 @@ function applyLayout(){
   if(!cont) return;
   order.forEach(sec=>{
     const el = cont.querySelector(`.dash-section[data-sec="${sec}"]`);
-    if(el) cont.appendChild(el); // mover al final en el orden guardado
+    if(el) cont.appendChild(el);
   });
 }
 function saveLayout(){
   const cont = document.getElementById('sections');
   if(!cont) return;
   const order = [...cont.querySelectorAll('.dash-section')].map(s=>s.dataset.sec);
-  try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(order)); } catch(e){ /* modo privado */ }
+  try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(order)); } catch(e){}
+}
+function currentOrder(){
+  const cont = document.getElementById('sections');
+  return cont ? [...cont.querySelectorAll('.dash-section')].map(s=>s.dataset.sec) : [];
+}
+// aplica un orden dado al dashboard real (mueve las secciones) y guarda
+function reorderDashboard(order){
+  const cont = document.getElementById('sections');
+  if(!cont) return;
+  order.forEach(sec=>{
+    const el = cont.querySelector(`.dash-section[data-sec="${sec}"]`);
+    if(el) cont.appendChild(el);
+  });
+  saveLayout();
+}
+// dibuja la lista compacta dentro del modal según un orden
+function renderLayoutList(order){
+  const list = document.getElementById('layoutList');
+  if(!list) return;
+  list.innerHTML = order.map((sec,i)=>{
+    const m = SEC_META[sec] || {nm:sec, ic:'▫️', bg:'#eef1f6'};
+    return `<div class="layout-item" draggable="true" data-sec="${sec}">
+      <span class="li-grip">⠿</span>
+      <span class="li-num">${i+1}</span>
+      <span class="li-ic" style="background:${m.bg}">${m.ic}</span>
+      <span class="li-name">${m.nm}</span>
+      <span class="li-moves">
+        <button class="li-up" title="Subir" ${i===0?'disabled':''}>▲</button>
+        <button class="li-down" title="Bajar" ${i===order.length-1?'disabled':''}>▼</button>
+      </span>
+    </div>`;
+  }).join('');
+  bindLayoutItemEvents();
+}
+function bindLayoutItemEvents(){
+  const list = document.getElementById('layoutList');
+  // botones ▲▼
+  list.querySelectorAll('.li-up').forEach(b=>b.onclick=e=>{
+    const it=e.target.closest('.layout-item'); const prev=it.previousElementSibling;
+    if(prev) it.parentNode.insertBefore(it, prev);
+    syncFromList();
+  });
+  list.querySelectorAll('.li-down').forEach(b=>b.onclick=e=>{
+    const it=e.target.closest('.layout-item'); const next=it.nextElementSibling;
+    if(next) it.parentNode.insertBefore(next, it);
+    syncFromList();
+  });
+  // drag & drop dentro del modal
+  let dragIt=null;
+  list.querySelectorAll('.layout-item').forEach(it=>{
+    it.ondragstart=()=>{ dragIt=it; it.classList.add('dragging'); };
+    it.ondragend=()=>{ it.classList.remove('dragging'); list.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over')); dragIt=null; syncFromList(); };
+    it.ondragover=e=>{
+      e.preventDefault(); if(!dragIt||dragIt===it) return;
+      list.querySelectorAll('.drag-over').forEach(x=>{if(x!==it)x.classList.remove('drag-over');});
+      it.classList.add('drag-over');
+      const r=it.getBoundingClientRect();
+      if((e.clientY-r.top)>r.height/2) it.after(dragIt); else it.before(dragIt);
+    };
+    it.ondrop=e=>e.preventDefault();
+  });
+}
+// lee el orden actual del modal, lo aplica al dashboard y renumera la lista
+function syncFromList(){
+  const list=document.getElementById('layoutList');
+  const order=[...list.querySelectorAll('.layout-item')].map(x=>x.dataset.sec);
+  reorderDashboard(order);            // mueve las secciones reales al instante
+  renderLayoutList(order);            // re-renderiza la lista (renumera + estados ▲▼)
 }
 function setupLayoutEditor(){
-  const cont = document.getElementById('sections');
   const btn = document.getElementById('editLayoutBtn');
-  if(!cont || !btn) return;
+  const modal = document.getElementById('layoutModal');
+  if(!btn || !modal) return;
+  applyLayout(); // aplicar orden guardado al cargar
 
-  // aplicar orden guardado al cargar
-  applyLayout();
-
-  let editing = false;
-  function setEditing(on){
-    editing = on;
-    document.body.classList.toggle('editing', on);
-    btn.classList.toggle('active', on);
-    const txt = btn.querySelector('.el-txt'); if(txt) txt.textContent = on ? 'Editando…' : 'Editar orden';
-    // activar/desactivar draggable
-    cont.querySelectorAll('.dash-section').forEach(s=> s.draggable = on);
-    if(on) cont.scrollIntoView({behavior:'smooth', block:'start'});
+  function open(){
+    renderLayoutList(currentOrder());
+    modal.classList.add('open');
+    btn.classList.add('active');
   }
-  btn.onclick = ()=> setEditing(!editing);
-  const done = document.getElementById('doneLayoutBtn');
-  if(done) done.onclick = ()=> setEditing(false);
-  const reset = document.getElementById('resetLayoutBtn');
-  if(reset) reset.onclick = ()=>{
+  function close(){ modal.classList.remove('open'); btn.classList.remove('active'); }
+  btn.onclick = ()=> modal.classList.contains('open') ? close() : open();
+  document.getElementById('layoutClose').onclick = close;
+  document.getElementById('layoutDone').onclick = close;
+  modal.addEventListener('click', e=>{ if(e.target===modal) close(); });
+  document.getElementById('layoutReset').onclick = ()=>{
     try { localStorage.removeItem(LAYOUT_KEY); } catch(e){}
     location.reload();
   };
-
-  // Drag & drop nativo
-  let dragEl = null;
-  cont.addEventListener('dragstart', e=>{
-    const sec = e.target.closest('.dash-section');
-    if(!sec || !editing) return;
-    dragEl = sec; sec.classList.add('dragging');
-    e.dataTransfer.effectAllowed='move';
-    try { e.dataTransfer.setData('text/plain', sec.dataset.sec); } catch(_){}
-  });
-  cont.addEventListener('dragend', ()=>{
-    if(dragEl) dragEl.classList.remove('dragging');
-    cont.querySelectorAll('.drag-over').forEach(s=>s.classList.remove('drag-over'));
-    dragEl=null;
-    saveLayout();
-  });
-  cont.addEventListener('dragover', e=>{
-    if(!editing || !dragEl) return;
-    e.preventDefault();
-    const target = e.target.closest('.dash-section');
-    if(!target || target===dragEl) return;
-    cont.querySelectorAll('.drag-over').forEach(s=>{ if(s!==target) s.classList.remove('drag-over'); });
-    target.classList.add('drag-over');
-    // insertar antes o después según posición del cursor
-    const rect = target.getBoundingClientRect();
-    const after = (e.clientY - rect.top) > rect.height/2;
-    if(after) target.after(dragEl); else target.before(dragEl);
-  });
-  cont.addEventListener('drop', e=>{ if(editing){ e.preventDefault(); saveLayout(); } });
 }
 setupLayoutEditor();
 
