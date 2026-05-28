@@ -231,6 +231,34 @@ header{
 .qr-arr{font-family:'Archivo';font-weight:800;font-size:18px;color:var(--ink3);transition:.18s;flex:none}
 .qr-btn:hover .qr-arr{color:var(--amber);transform:translateX(3px)}
 
+/* ===== CURSORES FUNCIONALES (sensación profesional) =====
+   Manita en todo lo clicable, texto en inputs, agarrar en lo arrastrable. */
+button:not(:disabled),
+.chip, .qr-btn, .seg button, .series-tog, .info-btn, .btn,
+.ins.clickable, .sku-row, .meta-row, .layout-item .li-moves button:not(:disabled),
+th[onclick], #tDet th, .pager button:not(:disabled), .modal-x,
+a[href], label[for], select, [role="button"], [data-qr], [data-sec] .sec-drag,
+.heat-cell.has, .legend-item, .toggle-label ~ .series-tog{
+  cursor:pointer;
+}
+/* campos de texto y fecha: cursor de texto */
+input[type="text"], input[type="search"], input[type="date"], input:not([type]){
+  cursor:text;
+}
+/* selects: manita (es un menú) */
+select{ cursor:pointer; }
+/* elementos arrastrables: agarrar */
+.layout-item, .layout-item .li-grip{ cursor:grab; }
+.layout-item:active, .layout-item.dragging, .layout-item .li-grip:active{ cursor:grabbing; }
+[draggable="true"]{ cursor:grab; }
+[draggable="true"]:active{ cursor:grabbing; }
+/* desactivados: cursor por defecto, sin manita */
+button:disabled, .pager button:disabled, .li-moves button:disabled, [aria-disabled="true"]{
+  cursor:default;
+}
+/* tarjetas no clicables y celdas de solo lectura: cursor normal */
+.card{ cursor:default; }
+
 /* ===== REORDENAR SECCIONES (panel compacto) ===== */
 .btn.edit-layout{display:inline-flex;align-items:center;gap:7px;width:auto;padding:0 14px}
 .btn.edit-layout .el-txt{font-family:'Archivo';font-weight:700;font-size:13px}
