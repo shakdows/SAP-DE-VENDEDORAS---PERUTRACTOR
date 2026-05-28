@@ -32,6 +32,7 @@ Chart.defaults.plugins.tooltip.bodyFont = {weight:'600',size:12};
 const ST = { cli:'', ven:'', lf:'', grp:'', doc:'', d1:'', d2:'', trend:'tv', gran:'d', mixMode:'m',
              sort:{col:'f', dir:-1}, page:1, per:14 };
 let charts = {};
+let USER_INTERACTED = false;  // se activa cuando el usuario toca cualquier filtro
 let INS_ROWS = [];
 let modalChart = null;
 
@@ -951,35 +952,42 @@ function renderCompare(){
 
 function render(){
   const rows = applyFilters();
-  renderChips();
-  renderKPIs(rows);
-  renderInsights(rows);
-  renderTrend(rows);
-  renderCumul(rows);
-  renderHeat(rows);
-  renderGroup(rows);
-  renderVen(rows);
-  renderLf(rows);
-  renderScatter(rows);
-  renderDow(rows);
-  renderRank(rows);
-  renderDetail(rows);
-  renderGain(rows);
-  renderGainMix(rows);
-  renderSkuGain(rows);
-  renderVenGain(rows);
-  renderCompare();
+  // Cada bloque se aísla: si uno falla (dato inesperado), los demás SÍ se actualizan.
+  const steps = [
+    ['chips',   ()=>renderChips()],
+    ['kpis',    ()=>renderKPIs(rows)],
+    ['insights',()=>renderInsights(rows)],
+    ['trend',   ()=>renderTrend(rows)],
+    ['cumul',   ()=>renderCumul(rows)],
+    ['heat',    ()=>renderHeat(rows)],
+    ['group',   ()=>renderGroup(rows)],
+    ['ven',     ()=>renderVen(rows)],
+    ['lf',      ()=>renderLf(rows)],
+    ['scatter', ()=>renderScatter(rows)],
+    ['dow',     ()=>renderDow(rows)],
+    ['rank',    ()=>renderRank(rows)],
+    ['detail',  ()=>renderDetail(rows)],
+    ['gain',    ()=>renderGain(rows)],
+    ['gainMix', ()=>renderGainMix(rows)],
+    ['skuGain', ()=>renderSkuGain(rows)],
+    ['venGain', ()=>renderVenGain(rows)],
+    ['compare', ()=>renderCompare()],
+  ];
+  for(const [name, fn] of steps){
+    try { fn(); }
+    catch(e){ console.error('Error al renderizar "'+name+'":', e); }
+  }
 }
 
 /* ===== EVENTS ===== */
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
-$('#fCli').addEventListener('input', debounce(e=>{ST.cli=e.target.value;ST.page=1;render();},220));
-$('#fVen').addEventListener('change',e=>{ST.ven=e.target.value;ST.page=1;render();});
-$('#fLf').addEventListener('change',e=>{ST.lf=e.target.value;ST.page=1;render();});
-$('#fGrp').addEventListener('change',e=>{ST.grp=e.target.value;ST.page=1;render();});
-$('#fDoc').addEventListener('change',e=>{ST.doc=e.target.value;ST.page=1;render();});
-$('#fD1').addEventListener('change',e=>{ST.d1=e.target.value;ST.page=1;render();});
-$('#fD2').addEventListener('change',e=>{ST.d2=e.target.value;ST.page=1;render();});
+$('#fCli').addEventListener('input', debounce(e=>{USER_INTERACTED=true;ST.cli=e.target.value;ST.page=1;render();},220));
+$('#fVen').addEventListener('change',e=>{USER_INTERACTED=true;ST.ven=e.target.value;ST.page=1;render();});
+$('#fLf').addEventListener('change',e=>{USER_INTERACTED=true;ST.lf=e.target.value;ST.page=1;render();});
+$('#fGrp').addEventListener('change',e=>{USER_INTERACTED=true;ST.grp=e.target.value;ST.page=1;render();});
+$('#fDoc').addEventListener('change',e=>{USER_INTERACTED=true;ST.doc=e.target.value;ST.page=1;render();});
+$('#fD1').addEventListener('change',e=>{USER_INTERACTED=true;ST.d1=e.target.value;ST.page=1;render();});
+$('#fD2').addEventListener('change',e=>{USER_INTERACTED=true;ST.d2=e.target.value;ST.page=1;render();});
 $('#resetBtn').onclick=()=>{
   Object.assign(ST,{cli:'',ven:'',lf:'',grp:'',doc:'',d1:'',d2:'',page:1});
   ['#fCli','#fVen','#fLf','#fGrp','#fDoc','#fD1','#fD2'].forEach(id=>$(id).value='');
@@ -1126,9 +1134,21 @@ async function loadLive(manual){
     const recs = transformSheet(json);
     if(!recs.length) throw new Error('Sin filas válidas');
     DATA = recs;
-    buildSelectors(); buildCompare();
-    Object.assign(ST,{cli:'',ven:'',lf:'',grp:'',doc:'',d1:'',d2:'',page:1});
-    ['#fCli','#fVen','#fLf','#fGrp','#fDoc','#fD1','#fD2'].forEach(id=>{if($(id))$(id).value='';});
+    buildSelectors();
+    // Solo reseteamos filtros si el usuario NO ha tocado nada todavía (carga inicial automática).
+    // Si ya interactuó, respetamos sus filtros y solo reconstruimos el comparador con fechas nuevas si no las tocó.
+    const userTouched = USER_INTERACTED;
+    if(!userTouched){
+      buildCompare();
+      Object.assign(ST,{cli:'',ven:'',lf:'',grp:'',doc:'',d1:'',d2:'',page:1});
+      ['#fCli','#fVen','#fLf','#fGrp','#fDoc','#fD1','#fD2'].forEach(id=>{if($(id))$(id).value='';});
+    } else {
+      // mantener selección del usuario; reponer el valor visible en los <select> que se reconstruyeron
+      if(ST.ven) $('#fVen').value = ST.ven;
+      if(ST.lf)  $('#fLf').value  = ST.lf;
+      if(ST.grp) $('#fGrp').value = ST.grp;
+      if(ST.doc) $('#fDoc').value = ST.doc;
+    }
     render();
     const now=new Date().toLocaleString('es-PE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     setStatus('ok',`En vivo · ${fNum(recs.length)} reg · ${now}`);
