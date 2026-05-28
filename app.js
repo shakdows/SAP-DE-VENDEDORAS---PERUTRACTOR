@@ -1,3 +1,84 @@
+// ============================================
+// TOKEN VALIDATION SYSTEM (CON FECHA AUTOMÁTICA)
+// ============================================
+
+// Lista de tokens válidos con fechas de expiración (enero a diciembre 2026)
+const VALID_TOKENS = [
+  { token: 'PERUTRACTOR-2026-01-31-ABC123XY', expiry: '2026-01-31' },  // Enero
+  { token: 'PERUTRACTOR-2026-02-28-DEF456UV', expiry: '2026-02-28' },  // Febrero
+  { token: 'PERUTRACTOR-2026-03-31-GHI789WX', expiry: '2026-03-31' },  // Marzo
+  { token: 'PERUTRACTOR-2026-04-30-JKL012YZ', expiry: '2026-04-30' },  // Abril
+  { token: 'PERUTRACTOR-2026-05-31-MNO345AB', expiry: '2026-05-31' },  // Mayo
+  { token: 'PERUTRACTOR-2026-06-30-PQR678CD', expiry: '2026-06-30' },  // Junio
+  { token: 'PERUTRACTOR-2026-07-31-STU901EF', expiry: '2026-07-31' },  // Julio
+  { token: 'PERUTRACTOR-2026-08-31-VWX234GH', expiry: '2026-08-31' },  // Agosto
+  { token: 'PERUTRACTOR-2026-09-30-YZA567IJ', expiry: '2026-09-30' },  // Septiembre
+  { token: 'PERUTRACTOR-2026-10-31-BCD890KL', expiry: '2026-10-31' },  // Octubre
+  { token: 'PERUTRACTOR-2026-11-30-EFG123MN', expiry: '2026-11-30' },  // Noviembre
+  { token: 'PERUTRACTOR-2026-12-31-HIJ456OP', expiry: '2026-12-31' },  // Diciembre
+];
+
+const TOKEN_STORAGE_KEY = 'perutractor_dashboard_token';
+
+// Función que valida si un token está expirado
+function isTokenExpired(expiryDate) {
+  const today = new Date();
+  const expiry = new Date(expiryDate);
+  expiry.setHours(23, 59, 59, 999);
+  return today > expiry;
+}
+
+// Función principal de validación
+function validateToken() {
+  const tokenScreen = document.getElementById('tokenScreen');
+  const tokenForm = document.getElementById('tokenForm');
+  const tokenInput = document.getElementById('tokenInput');
+  const tokenError = document.getElementById('tokenError');
+
+  const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+  
+  if (savedToken) {
+    const tokenObj = VALID_TOKENS.find(t => t.token === savedToken);
+    
+    if (tokenObj && !isTokenExpired(tokenObj.expiry)) {
+      tokenScreen.classList.add('hidden');
+      return true;
+    } else {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+    }
+  }
+
+  tokenScreen.classList.remove('hidden');
+  
+  tokenForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const inputToken = tokenInput.value.trim().toUpperCase();
+    
+    const tokenObj = VALID_TOKENS.find(t => t.token === inputToken);
+    
+    if (tokenObj && !isTokenExpired(tokenObj.expiry)) {
+      localStorage.setItem(TOKEN_STORAGE_KEY, inputToken);
+      tokenError.style.display = 'none';
+      tokenScreen.classList.add('hidden');
+      tokenInput.value = '';
+    } else {
+      tokenError.style.display = 'block';
+      tokenInput.style.borderColor = '#DC2626';
+      tokenInput.style.background = '#FEF2F2';
+      
+      setTimeout(() => {
+        tokenInput.style.borderColor = '#E5E7EB';
+        tokenInput.style.background = '#FAFAFA';
+      }, 1500);
+    }
+  });
+  
+  return false;
+}
+
+// Ejecutar al cargar la página
+document.addEventListener('DOMContentLoaded', validateToken);
+
 /* =====================================================================
    Panel de Ventas SAP — Repuestos CTP
    Creado por: ALEXIS RAMIREZ  ·  alias: SHAKDOWS
