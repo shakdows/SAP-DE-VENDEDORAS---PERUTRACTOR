@@ -1424,15 +1424,16 @@ function transformSheet(json){
     let tv=+numv(g(iTv)).toFixed(2);
     let tc=+numv(g(iTc)).toFixed(2);
     let mg=+numv(g(iM)).toFixed(2);
-    // --- BLINDAJE CONTRA DATOS SUCIOS ---
-    // Regla 1: la venta debe ser ~ costo + margen. Si está muy inflada y costo+margen es coherente, se corrige.
+    // --- BLINDAJE CONTRA DATOS SUCIOS EN LA COLUMNA "TOTAL VENTA" ---
+    // El costo y el margen son confiables; la venta debe ser igual a costo + margen.
+    // Si no cuadra (en cualquier dirección: inflada, negativa o corrupta), se recalcula.
     const suma=+(tc+mg).toFixed(2);
-    if(tv>0 && suma>0 && Math.abs(tv-suma) > Math.max(1, suma*0.02)){
+    const tolerancia=Math.max(0.5, Math.abs(suma)*0.02);
+    if(Math.abs(tv-suma) > tolerancia){
       descuadres++;
-      if(tv > suma*3){ tv=suma; corregidos++; }   // venta claramente inflada → usar costo+margen
+      tv=suma;            // venta = costo + margen (la fuente confiable)
+      corregidos++;
     }
-    // Regla 2: si el margen viene vacío pero hay venta y costo, derivarlo.
-    if(mg===0 && tv>0 && tc>0) mg=+(tv-tc).toFixed(2);
     recs.push({
       v:ven, k:(g(iK)||'')+'', doc:docRaw.toLowerCase().includes('cr')||docRaw.toLowerCase().includes('nota')?'NC':'FB',
       nd:(g(iND)||'')+'', cl:(g(iCl)||'')+'', g:grpRaw.trim().startsWith('1')?1:2, f:f,
