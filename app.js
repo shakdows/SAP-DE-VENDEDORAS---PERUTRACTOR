@@ -515,6 +515,105 @@ function exportCSV(){
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
 
+/* ===== MARCA (últimas 3 letras del SKU) ===== */
+function marcaDeSku(sku){
+  const s=(sku||'').trim().toUpperCase();
+  const m=s.match(/([A-Z]{2,4})$/);      // bloque de letras al final del código
+  if(!m) return 'SIN MARCA';
+  return m[1].slice(-3);                   // las últimas 3 letras
+}
+
+/* ===== EXPORTAR EXCEL SEPARADO POR MARCA ===== */
+function exportXlsxPorMarca(){
+  if(typeof XLSX==='undefined'){ alert('No se pudo cargar el generador de Excel. Verifica tu conexión a internet e intenta de nuevo.'); return; }
+  const rows = applyFilters();
+  if(!rows.length){ alert('No hay registros para exportar con los filtros actuales.'); return; }
+
+  // Agrupar filas por marca
+  const porMarca={};
+  rows.forEach(r=>{
+    const mk=marcaDeSku(r.sku);
+    (porMarca[mk]=porMarca[mk]||[]).push(r);
+  });
+
+  // Encabezados de cada hoja de detalle
+  const cols=['Fecha','Documento','N° Documento','Cliente','Grupo','Vendedor','Key','Línea/Familia','Marca','SKU','Descripción','Cantidad','Total Venta US$','Total Costo US$','Margen US$','Margen %'];
+  const filaDe=r=>{
+    const pct=r.tv?(r.m/r.tv*100):0;
+    return {
+      'Fecha':r.f,
+      'Documento':r.doc==='NC'?'Nota de Crédito':'Factura/Boleta',
+      'N° Documento':r.nd,
+      'Cliente':r.cl,
+      'Grupo':GRP[r.g],
+      'Vendedor':r.v,
+      'Key':r.k,
+      'Línea/Familia':r.lf,
+      'Marca':marcaDeSku(r.sku),
+      'SKU':r.sku,
+      'Descripción':r.d,
+      'Cantidad':r.q,
+      'Total Venta US$':round2(r.tv),
+      'Total Costo US$':round2(r.tc),
+      'Margen US$':round2(r.m),
+      'Margen %':round2(pct)
+    };
+  };
+
+  const wb=XLSX.utils.book_new();
+
+  // Marcas ordenadas por número de líneas (mayor a menor)
+  const marcas=Object.keys(porMarca).sort((a,b)=>porMarca[b].length-porMarca[a].length);
+
+  // --- HOJA RESUMEN ---
+  const resumen=marcas.map(mk=>{
+    const list=porMarca[mk];
+    const venta=list.reduce((a,r)=>a+r.tv,0);
+    const costo=list.reduce((a,r)=>a+r.tc,0);
+    const margen=list.reduce((a,r)=>a+r.m,0);
+    const unid=list.reduce((a,r)=>a+r.q,0);
+    return {
+      'Marca':mk,
+      'Líneas':list.length,
+      'Unidades':unid,
+      'Total Venta US$':round2(venta),
+      'Total Costo US$':round2(costo),
+      'Margen US$':round2(margen),
+      'Margen %':venta?round2(margen/venta*100):0
+    };
+  });
+  // Fila de total general
+  const tVenta=rows.reduce((a,r)=>a+r.tv,0);
+  const tCosto=rows.reduce((a,r)=>a+r.tc,0);
+  const tMargen=rows.reduce((a,r)=>a+r.m,0);
+  const tUnid=rows.reduce((a,r)=>a+r.q,0);
+  resumen.push({
+    'Marca':'TOTAL GENERAL','Líneas':rows.length,'Unidades':tUnid,
+    'Total Venta US$':round2(tVenta),'Total Costo US$':round2(tCosto),
+    'Margen US$':round2(tMargen),'Margen %':tVenta?round2(tMargen/tVenta*100):0
+  });
+  const wsR=XLSX.utils.json_to_sheet(resumen);
+  wsR['!cols']=[{wch:14},{wch:9},{wch:10},{wch:16},{wch:16},{wch:14},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, wsR, 'RESUMEN');
+
+  // --- UNA HOJA POR MARCA ---
+  const usados={};
+  marcas.forEach(mk=>{
+    const data=porMarca[mk].map(filaDe);
+    const ws=XLSX.utils.json_to_sheet(data, {header:cols});
+    ws['!cols']=[{wch:11},{wch:16},{wch:18},{wch:32},{wch:10},{wch:24},{wch:7},{wch:16},{wch:8},{wch:14},{wch:28},{wch:9},{wch:15},{wch:15},{wch:13},{wch:10}];
+    // Nombre de hoja válido (máx 31 chars, sin caracteres prohibidos, sin duplicados)
+    let nombre=mk.replace(/[\\\/\?\*\[\]:]/g,'').slice(0,28) || 'SIN';
+    if(usados[nombre]){ usados[nombre]++; nombre=nombre+'_'+usados[nombre]; } else { usados[nombre]=1; }
+    XLSX.utils.book_append_sheet(wb, ws, nombre);
+  });
+
+  const stamp=new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `ventas_por_marca_${rows.length}reg_${stamp}.xlsx`);
+}
+
+function round2(n){ return Math.round((Number(n)||0)*100)/100; }
+
 /* ===== ANALISTA AUTOMATICO ===== */
 const ICO = {
   up:'<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
@@ -1221,6 +1320,7 @@ $('#pgNext').onclick=()=>{ST.page++;renderDetail(applyFilters());};
 
 // Exportar CSV
 $('#exportBtn').onclick=exportCSV;
+$('#exportXlsxBtn').onclick=exportXlsxPorMarca;
 
 // Cierre del modal de detalle
 $('#mClose').onclick=closeModal;
