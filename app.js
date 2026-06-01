@@ -1414,19 +1414,33 @@ function transformSheet(json){
         iLf=idx('Linea'), iQ=idx('Cantidad'), iTv=idx('Total Venta'), iTc=idx('Total Costo'), iM=idx('Margen Total');
   if(iV<0||iTv<0||iF<0) throw new Error('Encabezados no reconocidos');
   const recs=[];
+  let descuadres=0, corregidos=0;
   json.table.rows.forEach(row=>{
     const c=row.c||[]; const g=(i)=> i>=0&&c[i]?c[i].v:null;
     const f=parseGvizDate(g(iF)); const ven=g(iV);
     if(!f||!ven) return;
     const docRaw=(g(iDoc)||'')+'';
     const grpRaw=(g(iG)||'')+'';
+    let tv=+numv(g(iTv)).toFixed(2);
+    let tc=+numv(g(iTc)).toFixed(2);
+    let mg=+numv(g(iM)).toFixed(2);
+    // --- BLINDAJE CONTRA DATOS SUCIOS ---
+    // Regla 1: la venta debe ser ~ costo + margen. Si está muy inflada y costo+margen es coherente, se corrige.
+    const suma=+(tc+mg).toFixed(2);
+    if(tv>0 && suma>0 && Math.abs(tv-suma) > Math.max(1, suma*0.02)){
+      descuadres++;
+      if(tv > suma*3){ tv=suma; corregidos++; }   // venta claramente inflada → usar costo+margen
+    }
+    // Regla 2: si el margen viene vacío pero hay venta y costo, derivarlo.
+    if(mg===0 && tv>0 && tc>0) mg=+(tv-tc).toFixed(2);
     recs.push({
       v:ven, k:(g(iK)||'')+'', doc:docRaw.toLowerCase().includes('cr')||docRaw.toLowerCase().includes('nota')?'NC':'FB',
       nd:(g(iND)||'')+'', cl:(g(iCl)||'')+'', g:grpRaw.trim().startsWith('1')?1:2, f:f,
       sku:(g(iSku)||'')+'', d:(g(iD)||'')+'', lf:(g(iLf)||'SIN LÍNEA')+'',
-      q:Math.round(numv(g(iQ))), tv:+numv(g(iTv)).toFixed(2), tc:+numv(g(iTc)).toFixed(2), m:+numv(g(iM)).toFixed(2)
+      q:Math.round(numv(g(iQ))), tv:tv, tc:tc, m:mg
     });
   });
+  if(descuadres>0) console.warn(`[Datos] ${descuadres} filas con venta ≠ costo+margen; ${corregidos} corregidas. Revisar columna "Total Venta" del Sheet.`);
   return recs;
 }
 
