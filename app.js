@@ -1424,14 +1424,17 @@ function transformSheet(json){
     let tv=+numv(g(iTv)).toFixed(2);
     let tc=+numv(g(iTc)).toFixed(2);
     let mg=+numv(g(iM)).toFixed(2);
-    // --- BLINDAJE CONTRA DATOS SUCIOS EN LA COLUMNA "TOTAL VENTA" ---
-    // El costo y el margen son confiables; la venta debe ser igual a costo + margen.
-    // Si no cuadra (en cualquier dirección: inflada, negativa o corrupta), se recalcula.
+    // --- BLINDAJE SOLO CONTRA CORRUPCIÓN GRAVE ---
+    // La columna "Total Venta" del Sheet es la fuente real y se respeta tal cual.
+    // Solo se recalcula (venta = costo + margen) si la venta viene CLARAMENTE corrupta:
+    // diferencia mayor al 50% respecto a costo+margen (caso +$79M, negativos, ceros).
+    // Las diferencias de centavos por redondeo NO se tocan: así el total coincide exacto con el Sheet.
     const suma=+(tc+mg).toFixed(2);
-    const tolerancia=Math.max(0.5, Math.abs(suma)*0.02);
-    if(Math.abs(tv-suma) > tolerancia){
+    const corrupta = suma!==0 && ( Math.abs(tv-suma) > Math.abs(suma)*0.5 );
+    const ventaCero = tv===0 && suma!==0;
+    if(corrupta || ventaCero){
       descuadres++;
-      tv=suma;            // venta = costo + margen (la fuente confiable)
+      tv=suma;            // solo en corrupción real usamos costo + margen
       corregidos++;
     }
     recs.push({
