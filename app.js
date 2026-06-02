@@ -1618,6 +1618,20 @@ setupLayoutEditor();
 /* ===== GO ===== */
 buildSelectors();
 buildCompare();
-render();          // pinta al instante con datos locales (data.js)
-loadLive(false);   // intenta refrescar desde Google Sheets
+render();          // pinta al instante con datos locales (data.js), oculto bajo el overlay
+
+// Oculta el overlay de carga (siempre, haya o no conexión al Sheet)
+function hideLoadingOverlay(){
+  const ov=document.getElementById('loadingOverlay');
+  if(ov) ov.classList.add('hidden');
+}
+
+// Carga en vivo y recién entonces quita el overlay → el usuario nunca ve el parpadeo
+(async ()=>{
+  await loadLive(false);   // espera a que termine de leer el Sheet (o falle)
+  hideLoadingOverlay();
+})();
+// Red de seguridad: si el Sheet tarda demasiado, igual mostramos el dashboard a los 12s
+setTimeout(hideLoadingOverlay, 12000);
+
 $('#refreshBtn') && ($('#refreshBtn').onclick=()=>loadLive(true));
