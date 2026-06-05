@@ -96,12 +96,13 @@ const DOW = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado
    Se emparejan por coincidencia de nombre (los datos traen nombre completo,
    la tabla de metas usa el nombre corto). Edita aquí cuando cambien las metas. */
 const METAS = [
-  { match:'MARISOL',  meta:70000 },
-  { match:'JOHAMNA',  meta:40000 },
-  { match:'NORMA',    meta:40000 },
-  { match:'SUGEI',    meta:40000 },
+  { match:'MARISOL',  meta:95000 },
+  { match:'JOHAMNA',  meta:65000 },
+  { match:'NORMA',    meta:55000 },
+  { match:'SUGEI',    meta:45000 },
   { match:'LIDIA',    meta:40000 },
-  { match:'GIOVANNI', meta:40000 },
+  { match:'GIOVANNI', meta:55000 },
+  { match:'BRYAN',    meta:20000 },
   { match:'OFICINA',  meta:10000 },
 ];
 // devuelve la meta asignada a un nombre de vendedor (0 si no tiene)
