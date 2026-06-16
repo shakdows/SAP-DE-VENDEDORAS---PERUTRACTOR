@@ -1430,21 +1430,15 @@ function transformSheet(json){
     const tvSheet=+numv(g(iTv)).toFixed(2);
     const tc=+numv(g(iTc)).toFixed(2);
     const mg=+numv(g(iM)).toFixed(2);
-    const suma=+(tc+mg).toFixed(2);                 // costo + margen = valor económico real de la línea
-    // --- BLINDAJE v2: frena la basura de "Total Venta" SIN dañar data buena ---
-    // Caso típico que rompía el dashboard: venta del Sheet disparada (ej. 40,000,000).
-    // Como costo y margen sí son confiables, en ese caso usamos costo+margen.
-    // Si el typo está en costo/margen (no en venta), respetamos la venta del Sheet.
-    // Si venta=0 y solo hay margen, NO inventamos venta (se queda en 0 y se avisa).
-    let tv=tvSheet, _tipo=null;
-    const inconsistente = Math.abs(tvSheet-suma) > Math.max(TOL_ABS, Math.abs(suma)*0.5);
-    if(tvSheet===0 && suma>TOL_ABS){
-      _tipo='Venta en 0 con margen ≠ 0 (revisar en el Sheet)';
-    } else if(inconsistente){
-      const sumaSospechosa = Math.abs(tc) > Math.abs(tvSheet)*5+1000 || Math.abs(mg) > Math.abs(tvSheet)*5+1000;
-      if(sumaSospechosa){ tv=tvSheet; _tipo='Costo o margen sospechoso (venta del Sheet conservada)'; }
-      else { tv=suma; _tipo='Venta corregida con costo+margen (revisar Sheet)'; }
-    }
+    // --- BLINDAJE v3: la VENTA se calcula como COSTO + MARGEN ---
+    // El costo y el margen del Sheet son confiables; la columna "Total Venta" trae
+    // basura (valores disparados). Por eso la venta mostrada = costo + margen, que es
+    // el valor económico real y coincide con lo que registra el SAP.
+    const tv=+(tc+mg).toFixed(2);
+    // Avisamos cuando la columna "Total Venta" del Sheet NO coincide, para limpiarla en la fuente.
+    let _tipo=null;
+    if(Math.abs(tvSheet-tv) > Math.max(TOL_ABS, Math.abs(tv)*0.5))
+      _tipo = tvSheet>tv ? 'Venta del Sheet inflada (se usó costo+margen)' : 'Venta del Sheet menor a costo+margen';
     if(_tipo) anomalias.push({fila:ri+2, vendedor:ven, doc:(g(iND)||'')+'', sku:(g(iSku)||'')+'',
                               venta_sheet:tvSheet, costo:tc, margen:mg, venta_usada:tv, tipo:_tipo});
     recs.push({
