@@ -1427,20 +1427,26 @@ function transformSheet(json){
     // Antes un "blindaje" cambiaba Total Venta y eso descuadraba el dashboard vs el Sheet.
     // Ahora el total del dashboard coincide EXACTO con el Sheet. Las filas dudosas
     // se guardan en window.ANOMALIAS_DATOS para revisarlas en la fuente.
-    const tv=+numv(g(iTv)).toFixed(2);
+    const tvSheet=+numv(g(iTv)).toFixed(2);
     const tc=+numv(g(iTc)).toFixed(2);
     const mg=+numv(g(iM)).toFixed(2);
-    const suma=+(tc+mg).toFixed(2);
-    const dif=+(tv-suma).toFixed(2);
-    let _tipo=null;
-    if(tv===0 && suma>TOL_ABS) _tipo='Venta en 0 con margen ≠ 0 (¿venta real sin cargar?)';
-    else if(Math.abs(dif) > Math.max(TOL_ABS, Math.abs(suma)*0.5)){
-      if(Math.abs(tc) > Math.abs(tv)*5 && Math.abs(tc)>1000) _tipo='Costo sospechoso (la venta parece correcta)';
-      else if(Math.abs(tv) > Math.abs(suma)*5 && Math.abs(tv)>1000) _tipo='Venta sospechosa (¿año pegado en la celda?)';
-      else _tipo='Venta ≠ costo + margen';
+    const suma=+(tc+mg).toFixed(2);                 // costo + margen = valor económico real de la línea
+    // --- BLINDAJE v2: frena la basura de "Total Venta" SIN dañar data buena ---
+    // Caso típico que rompía el dashboard: venta del Sheet disparada (ej. 40,000,000).
+    // Como costo y margen sí son confiables, en ese caso usamos costo+margen.
+    // Si el typo está en costo/margen (no en venta), respetamos la venta del Sheet.
+    // Si venta=0 y solo hay margen, NO inventamos venta (se queda en 0 y se avisa).
+    let tv=tvSheet, _tipo=null;
+    const inconsistente = Math.abs(tvSheet-suma) > Math.max(TOL_ABS, Math.abs(suma)*0.5);
+    if(tvSheet===0 && suma>TOL_ABS){
+      _tipo='Venta en 0 con margen ≠ 0 (revisar en el Sheet)';
+    } else if(inconsistente){
+      const sumaSospechosa = Math.abs(tc) > Math.abs(tvSheet)*5+1000 || Math.abs(mg) > Math.abs(tvSheet)*5+1000;
+      if(sumaSospechosa){ tv=tvSheet; _tipo='Costo o margen sospechoso (venta del Sheet conservada)'; }
+      else { tv=suma; _tipo='Venta corregida con costo+margen (revisar Sheet)'; }
     }
     if(_tipo) anomalias.push({fila:ri+2, vendedor:ven, doc:(g(iND)||'')+'', sku:(g(iSku)||'')+'',
-                              venta:tv, costo:tc, margen:mg, diferencia:dif, tipo:_tipo});
+                              venta_sheet:tvSheet, costo:tc, margen:mg, venta_usada:tv, tipo:_tipo});
     recs.push({
       v:ven, k:(g(iK)||'')+'', doc:docRaw.toLowerCase().includes('cr')||docRaw.toLowerCase().includes('nota')?'NC':'FB',
       nd:(g(iND)||'')+'', cl:(g(iCl)||'')+'', g:grpRaw.trim().startsWith('1')?1:2, f:f,
@@ -1463,8 +1469,8 @@ function pintarAnomalias(){
   if(!a.length) return;
   const box=document.createElement('div'); box.id='anomBox';
   box.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9999;max-width:430px;font-family:Calibri,system-ui,sans-serif;background:#fff;border:1px solid #B45309;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);overflow:hidden';
-  const filas=a.map(x=>`<tr><td style="padding:4px 8px;color:#B45309;font-weight:600">${x.fila}</td><td style="padding:4px 8px">${x.doc}</td><td style="padding:4px 8px;text-align:right">${(x.venta||0).toLocaleString('en-US',{minimumFractionDigits:2})}</td><td style="padding:4px 8px;color:#6b7280">${x.tipo}</td></tr>`).join('');
-  box.innerHTML=`<div id="anomHead" style="background:#B45309;color:#fff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer"><span>⚠️ ${a.length} fila(s) por revisar en el Sheet</span><span style="opacity:.8">▼</span></div><div id="anomBody" style="max-height:260px;overflow:auto;display:none"><table style="border-collapse:collapse;font-size:12.5px;width:100%"><thead><tr style="background:#fff7ea;color:#334155"><th style="padding:6px 8px;text-align:left">Fila</th><th style="padding:6px 8px;text-align:left">Documento</th><th style="padding:6px 8px;text-align:right">Venta</th><th style="padding:6px 8px;text-align:left">Detalle</th></tr></thead><tbody>${filas}</tbody></table></div>`;
+  const filas=a.map(x=>`<tr><td style="padding:4px 8px;color:#B45309;font-weight:600">${x.fila}</td><td style="padding:4px 8px">${x.doc}</td><td style="padding:4px 8px;text-align:right">${(x.venta_sheet||0).toLocaleString('en-US',{minimumFractionDigits:2})}</td><td style="padding:4px 8px;text-align:right;color:#15803d">${(x.venta_usada||0).toLocaleString('en-US',{minimumFractionDigits:2})}</td><td style="padding:4px 8px;color:#6b7280">${x.tipo}</td></tr>`).join('');
+  box.innerHTML=`<div id="anomHead" style="background:#B45309;color:#fff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer"><span>⚠️ ${a.length} fila(s) por revisar en el Sheet</span><span style="opacity:.8">▼</span></div><div id="anomBody" style="max-height:260px;overflow:auto;display:none"><table style="border-collapse:collapse;font-size:12.5px;width:100%"><thead><tr style="background:#fff7ea;color:#334155"><th style="padding:6px 8px;text-align:left">Fila</th><th style="padding:6px 8px;text-align:left">Documento</th><th style="padding:6px 8px;text-align:right">Venta Sheet</th><th style="padding:6px 8px;text-align:right">Usada</th><th style="padding:6px 8px;text-align:left">Detalle</th></tr></thead><tbody>${filas}</tbody></table></div>`;
   document.body.appendChild(box);
   const body=box.querySelector('#anomBody');
   box.querySelector('#anomHead').onclick=()=>{ body.style.display = body.style.display==='none'?'block':'none'; };
