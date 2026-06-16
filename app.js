@@ -1430,15 +1430,23 @@ function transformSheet(json){
     const tvSheet=+numv(g(iTv)).toFixed(2);
     const tc=+numv(g(iTc)).toFixed(2);
     const mg=+numv(g(iM)).toFixed(2);
-    // --- BLINDAJE v3: la VENTA se calcula como COSTO + MARGEN ---
-    // El costo y el margen del Sheet son confiables; la columna "Total Venta" trae
-    // basura (valores disparados). Por eso la venta mostrada = costo + margen, que es
-    // el valor económico real y coincide con lo que registra el SAP.
-    const tv=+(tc+mg).toFixed(2);
-    // Avisamos cuando la columna "Total Venta" del Sheet NO coincide, para limpiarla en la fuente.
-    let _tipo=null;
-    if(Math.abs(tvSheet-tv) > Math.max(TOL_ABS, Math.abs(tv)*0.5))
-      _tipo = tvSheet>tv ? 'Venta del Sheet inflada (se usó costo+margen)' : 'Venta del Sheet menor a costo+margen';
+    // --- BLINDAJE v4: VENTA = COSTO + MARGEN, con guardia para basura en costo/margen ---
+    // Regla base: la venta se arma con costo+margen (columnas confiables), inmune a la
+    // basura de "Total Venta". Excepción: si el costo o el margen son una cifra claramente
+    // disparada (typo en esa celda), conservamos la venta original del Sheet.
+    const suma=+(tc+mg).toFixed(2);
+    const A=Math.abs(tc), B=Math.abs(mg), S=Math.abs(tvSheet);
+    const costoOutlier  = A>1000 && A>B*20 && A>S*20;
+    const margenOutlier = B>1000 && B>A*20 && B>S*20;
+    let tv, _tipo=null;
+    if(costoOutlier || margenOutlier){
+      tv=tvSheet;
+      _tipo='Costo o margen disparado (se conservó la venta del Sheet)';
+    } else {
+      tv=suma;
+      if(Math.abs(tvSheet-tv) > Math.max(TOL_ABS, Math.abs(tv)*0.5))
+        _tipo = tvSheet>tv ? 'Venta del Sheet inflada (se usó costo+margen)' : 'Venta del Sheet menor a costo+margen';
+    }
     if(_tipo) anomalias.push({fila:ri+2, vendedor:ven, doc:(g(iND)||'')+'', sku:(g(iSku)||'')+'',
                               venta_sheet:tvSheet, costo:tc, margen:mg, venta_usada:tv, tipo:_tipo});
     recs.push({
