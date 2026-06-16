@@ -1430,18 +1430,23 @@ function transformSheet(json){
     const tvSheet=+numv(g(iTv)).toFixed(2);
     const tc=+numv(g(iTc)).toFixed(2);
     const mg=+numv(g(iM)).toFixed(2);
+    // --- BLINDAJE v4: VENTA = COSTO + MARGEN (columnas confiables) ---
+    // La columna "Total Venta" del Sheet trae basura (suma 40M). El costo y el margen
+    // SÍ son confiables, así que la venta se arma como costo+margen = valor económico real.
+    // Excepción: si el costo o el margen vienen disparados (typo en esa celda), se conserva
+    // la venta original del Sheet. Las filas dudosas se AVISAN en el panel.
     const suma=+(tc+mg).toFixed(2);
-    // --- BLINDAJE v5: se RESPETA la venta del Sheet (tu fuente de verdad) ---
-    // El dashboard muestra tu columna "Total Venta" tal cual: el total coincide
-    // exacto con tu Sheet. SOLO se reemplaza una venta si es ABSURDA (cifra disparada:
-    // más de 100,000 en una línea y más de 10x el costo+margen) — ahí se usa costo+margen
-    // como red de emergencia para que un dato basura no rompa el total (caso +$40M).
-    // Las filas que no cuadran con costo+margen solo se AVISAN (no se tocan).
-    let tv=tvSheet, _tipo=null;
-    if(Math.abs(tvSheet) > 100000 && suma>0 && Math.abs(tvSheet) > Math.abs(suma)*10){
-      tv=suma; _tipo='Venta disparada en el Sheet (se usó costo+margen)';
-    } else if(Math.abs(tvSheet-suma) > Math.max(TOL_ABS, Math.abs(suma)*0.5)){
-      _tipo='Venta ≠ costo+margen (revisar en el Sheet)';
+    const A=Math.abs(tc), B=Math.abs(mg), S=Math.abs(tvSheet);
+    const costoOutlier  = A>1000 && A>B*20 && A>S*20;
+    const margenOutlier = B>1000 && B>A*20 && B>S*20;
+    let tv, _tipo=null;
+    if(costoOutlier || margenOutlier){
+      tv=tvSheet;
+      _tipo='Costo o margen disparado (se conservó la venta del Sheet)';
+    } else {
+      tv=suma;
+      if(Math.abs(tvSheet-tv) > Math.max(TOL_ABS, Math.abs(tv)*0.5))
+        _tipo = tvSheet>tv ? 'Venta del Sheet inflada (se usó costo+margen)' : 'Venta del Sheet menor a costo+margen';
     }
     if(_tipo) anomalias.push({fila:ri+2, vendedor:ven, doc:(g(iND)||'')+'', sku:(g(iSku)||'')+'',
                               venta_sheet:tvSheet, costo:tc, margen:mg, venta_usada:tv, tipo:_tipo});
