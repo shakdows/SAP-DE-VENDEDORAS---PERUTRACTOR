@@ -1415,29 +1415,32 @@ function transformSheet(json){
         iLf=idx('Linea'), iQ=idx('Cantidad'), iTv=idx('Total Venta'), iTc=idx('Total Costo'), iM=idx('Margen Total');
   if(iV<0||iTv<0||iF<0) throw new Error('Encabezados no reconocidos');
   const recs=[];
-  let descuadres=0, corregidos=0;
-  json.table.rows.forEach(row=>{
+  const anomalias=[];            // filas raras: SOLO se anotan, NO se modifican
+  const TOL_ABS=1.00;            // ignora diferencias de centavos por redondeo
+  json.table.rows.forEach((row,ri)=>{
     const c=row.c||[]; const g=(i)=> i>=0&&c[i]?c[i].v:null;
     const f=parseGvizDate(g(iF)); const ven=g(iV);
     if(!f||!ven) return;
     const docRaw=(g(iDoc)||'')+'';
     const grpRaw=(g(iG)||'')+'';
-    let tv=+numv(g(iTv)).toFixed(2);
-    let tc=+numv(g(iTc)).toFixed(2);
-    let mg=+numv(g(iM)).toFixed(2);
-    // --- BLINDAJE SOLO CONTRA CORRUPCIÓN GRAVE ---
-    // La columna "Total Venta" del Sheet es la fuente real y se respeta tal cual.
-    // Solo se recalcula (venta = costo + margen) si la venta viene CLARAMENTE corrupta:
-    // diferencia mayor al 50% respecto a costo+margen (caso +$79M, negativos, ceros).
-    // Las diferencias de centavos por redondeo NO se tocan: así el total coincide exacto con el Sheet.
+    // --- LA VENTA DEL SHEET SE RESPETA SIEMPRE (ya no se sobreescribe) ---
+    // Antes un "blindaje" cambiaba Total Venta y eso descuadraba el dashboard vs el Sheet.
+    // Ahora el total del dashboard coincide EXACTO con el Sheet. Las filas dudosas
+    // se guardan en window.ANOMALIAS_DATOS para revisarlas en la fuente.
+    const tv=+numv(g(iTv)).toFixed(2);
+    const tc=+numv(g(iTc)).toFixed(2);
+    const mg=+numv(g(iM)).toFixed(2);
     const suma=+(tc+mg).toFixed(2);
-    const corrupta = suma!==0 && ( Math.abs(tv-suma) > Math.abs(suma)*0.5 );
-    const ventaCero = tv===0 && suma!==0;
-    if(corrupta || ventaCero){
-      descuadres++;
-      tv=suma;            // solo en corrupción real usamos costo + margen
-      corregidos++;
+    const dif=+(tv-suma).toFixed(2);
+    let _tipo=null;
+    if(tv===0 && suma>TOL_ABS) _tipo='Venta en 0 con margen ≠ 0 (¿venta real sin cargar?)';
+    else if(Math.abs(dif) > Math.max(TOL_ABS, Math.abs(suma)*0.5)){
+      if(Math.abs(tc) > Math.abs(tv)*5 && Math.abs(tc)>1000) _tipo='Costo sospechoso (la venta parece correcta)';
+      else if(Math.abs(tv) > Math.abs(suma)*5 && Math.abs(tv)>1000) _tipo='Venta sospechosa (¿año pegado en la celda?)';
+      else _tipo='Venta ≠ costo + margen';
     }
+    if(_tipo) anomalias.push({fila:ri+2, vendedor:ven, doc:(g(iND)||'')+'', sku:(g(iSku)||'')+'',
+                              venta:tv, costo:tc, margen:mg, diferencia:dif, tipo:_tipo});
     recs.push({
       v:ven, k:(g(iK)||'')+'', doc:docRaw.toLowerCase().includes('cr')||docRaw.toLowerCase().includes('nota')?'NC':'FB',
       nd:(g(iND)||'')+'', cl:(g(iCl)||'')+'', g:grpRaw.trim().startsWith('1')?1:2, f:f,
@@ -1445,8 +1448,26 @@ function transformSheet(json){
       q:Math.round(numv(g(iQ))), tv:tv, tc:tc, m:mg
     });
   });
-  if(descuadres>0) console.warn(`[Datos] ${descuadres} filas con venta ≠ costo+margen; ${corregidos} corregidas. Revisar columna "Total Venta" del Sheet.`);
+  window.ANOMALIAS_DATOS = anomalias;
+  if(anomalias.length){
+    console.warn(`[Validador] ${anomalias.length} fila(s) por revisar en el Sheet (no se modificó ningún número).`);
+    try{ console.table(anomalias); }catch(e){}
+  }
   return recs;
+}
+
+/* Panel flotante opcional que lista las filas a revisar. Autocontenido. */
+function pintarAnomalias(){
+  const a = window.ANOMALIAS_DATOS || [];
+  const old=document.getElementById('anomBox'); if(old) old.remove();
+  if(!a.length) return;
+  const box=document.createElement('div'); box.id='anomBox';
+  box.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9999;max-width:430px;font-family:Calibri,system-ui,sans-serif;background:#fff;border:1px solid #B45309;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);overflow:hidden';
+  const filas=a.map(x=>`<tr><td style="padding:4px 8px;color:#B45309;font-weight:600">${x.fila}</td><td style="padding:4px 8px">${x.doc}</td><td style="padding:4px 8px;text-align:right">${(x.venta||0).toLocaleString('en-US',{minimumFractionDigits:2})}</td><td style="padding:4px 8px;color:#6b7280">${x.tipo}</td></tr>`).join('');
+  box.innerHTML=`<div id="anomHead" style="background:#B45309;color:#fff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer"><span>⚠️ ${a.length} fila(s) por revisar en el Sheet</span><span style="opacity:.8">▼</span></div><div id="anomBody" style="max-height:260px;overflow:auto;display:none"><table style="border-collapse:collapse;font-size:12.5px;width:100%"><thead><tr style="background:#fff7ea;color:#334155"><th style="padding:6px 8px;text-align:left">Fila</th><th style="padding:6px 8px;text-align:left">Documento</th><th style="padding:6px 8px;text-align:right">Venta</th><th style="padding:6px 8px;text-align:left">Detalle</th></tr></thead><tbody>${filas}</tbody></table></div>`;
+  document.body.appendChild(box);
+  const body=box.querySelector('#anomBody');
+  box.querySelector('#anomHead').onclick=()=>{ body.style.display = body.style.display==='none'?'block':'none'; };
 }
 
 function setStatus(state, msg){
@@ -1486,6 +1507,7 @@ async function loadLive(manual){
       if(ST.sku) $('#fSku').value = ST.sku;
     }
     render();
+    pintarAnomalias();
     const now=new Date().toLocaleString('es-PE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     setStatus('ok',`En vivo · ${fNum(recs.length)} reg · ${now}`);
   }catch(e){
